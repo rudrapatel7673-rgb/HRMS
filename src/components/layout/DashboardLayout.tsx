@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -43,6 +44,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const isMobile = useIsMobile();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = user?.role === 'admin' ? adminNavItems : employeeNavItems;
@@ -65,20 +67,13 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       {/* Sidebar */}
       <motion.aside
         initial={false}
-        animate={{ x: sidebarOpen ? 0 : -300 }}
+        animate={{ x: (isMobile && !sidebarOpen) ? -300 : 0 }}
         className={cn(
-          "fixed top-0 left-0 h-full w-64 glass-card border-r z-40 p-5 flex flex-col lg:translate-x-0",
-          "lg:static lg:animate-none"
+          "fixed top-0 left-0 h-full w-64 glass-card border-r z-40 p-5 flex flex-col lg:translate-x-0"
         )}
       >
-        <Link to="/" className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-lg">D</span>
-          </div>
-          <div>
-            <span className="font-bold text-lg gradient-text block">Dayflow</span>
-            <span className="text-[10px] text-muted-foreground">HRMS</span>
-          </div>
+        <Link to="/" className="flex items-center mb-8 -ml-3">
+          <img src="/full_logo.png" alt="Dayflow" className="h-16 w-auto object-contain" />
         </Link>
 
         {/* Profile Card */}
@@ -86,22 +81,22 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center ring-2 ring-primary/20">
               <span className="text-primary-foreground font-bold text-lg">
-                {user?.name.charAt(0)}
+                {user?.name?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm truncate">{user?.name}</p>
-              <p className="text-xs text-muted-foreground capitalize">{user?.role}</p>
+              <p className="font-semibold text-sm truncate">{user?.name || 'User'}</p>
+              <p className="text-xs text-muted-foreground capitalize">{user?.role || 'Member'}</p>
             </div>
           </div>
           <div className="space-y-1 text-xs text-muted-foreground">
-            <p className="truncate">{user?.email}</p>
-            <p className="text-primary font-medium">ID: {user?.id}</p>
+            <p className="truncate">{user?.email || ''}</p>
+            <p className="text-primary font-medium">ID: {user?.id || '...'}</p>
           </div>
         </div>
 
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-3 px-2">Menu</p>
-        
+
         <nav className="flex-1 space-y-1">
           {navItems.map((item) => {
             const isActive = location.pathname === item.path;
@@ -139,7 +134,7 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
       </motion.aside>
 
       {/* Main content */}
-      <main className="lg:ml-0 flex-1 min-h-screen p-6 lg:p-8 pt-20 lg:pt-8">
+      <main className="lg:ml-64 min-h-screen p-4 lg:p-8 lg:pl-6 pt-20 lg:pt-10 text-left">
         <motion.div
           key={location.pathname}
           initial={{ opacity: 0, y: 20 }}

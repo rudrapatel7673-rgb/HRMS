@@ -33,7 +33,7 @@ export const SignUp = () => {
       employeeId,
       role,
     });
-    
+
     if (success) {
       toast({
         title: 'Account created!',
@@ -47,25 +47,22 @@ export const SignUp = () => {
         variant: 'destructive',
       });
     }
-    
+
     setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 py-12">
       <AnimatedBackground />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="w-full max-w-md"
       >
         <div className="glass-card rounded-3xl p-8">
-          <Link to="/" className="flex items-center gap-2 justify-center mb-8">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">D</span>
-            </div>
-            <span className="font-bold text-2xl gradient-text">Dayflow</span>
+          <Link to="/" className="flex items-center justify-center mb-10">
+            <img src="/full_logo.png" alt="Dayflow" className="h-32 w-auto object-contain" />
           </Link>
 
           <h1 className="text-2xl font-bold text-center mb-2">Create an account</h1>
