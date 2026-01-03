@@ -22,29 +22,26 @@ export const SignIn = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    const success = await login(email, password);
-    
-    if (success) {
+    try {
+      await login(email, password);
+
       toast({
         title: 'Welcome back!',
         description: 'You have successfully signed in.',
       });
       navigate('/dashboard');
-    } else {
-      toast({
-        title: 'Error',
-        description: 'Invalid credentials. Try john@dayflow.com or admin@dayflow.com',
-        variant: 'destructive',
-      });
+    } catch (error) {
+      // Error is already handled/toasted in login function, but we can log it
+      console.error("Login failed", error);
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <AnimatedBackground />
-      
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -69,7 +66,7 @@ export const SignIn = () => {
               <Input
                 id="email"
                 type="email"
-                placeholder="john@dayflow.com"
+                placeholder="your@email.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -119,10 +116,8 @@ export const SignIn = () => {
 
           <div className="mt-6 p-4 rounded-xl bg-secondary/50 border border-border">
             <p className="text-sm text-muted-foreground text-center">
-              <strong>Demo accounts:</strong><br />
-              Employee: john@dayflow.com<br />
-              Admin: admin@dayflow.com<br />
-              (any password with 6+ chars)
+              <strong>Enter your credentials</strong><br />
+              Employee or Admin account
             </p>
           </div>
 

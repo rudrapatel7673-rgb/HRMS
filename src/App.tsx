@@ -7,7 +7,7 @@ import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import { SignIn } from "./pages/SignIn";
-import { SignUp } from "./pages/SignUp";
+import { SignUp } from "./pages/Signup";
 import { Dashboard } from "./pages/Dashboard";
 import { Profile } from "./pages/Profile";
 import { Attendance } from "./pages/Attendance";
@@ -15,11 +15,14 @@ import { Leave } from "./pages/Leave";
 import { Payroll } from "./pages/Payroll";
 import { Employees } from "./pages/Employees";
 import { Approvals } from "./pages/Approvals";
+import { TestAuth } from "./pages/TestAuth";
+
 
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) return <div className="flex items-center justify-center min-h-screen">Loading...</div>;
   return isAuthenticated ? <>{children}</> : <Navigate to="/signin" />;
 };
 
@@ -85,6 +88,7 @@ const AppRoutes = () => {
           </ProtectedRoute>
         }
       />
+      <Route path="/test-auth" element={<TestAuth />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
