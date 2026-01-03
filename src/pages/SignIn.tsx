@@ -72,15 +72,7 @@ export const SignIn = () => {
             </div>
 
             <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
-                <Link
-                  to="/forgot-password"
-                  className="text-sm text-primary hover:underline font-medium"
-                >
-                  Forgot password?
-                </Link>
-              </div>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -119,12 +111,6 @@ export const SignIn = () => {
             </Button>
           </form>
 
-          <div className="mt-6 p-4 rounded-xl bg-secondary/50 border border-border">
-            <p className="text-sm text-muted-foreground text-center">
-              <strong>Enter your credentials</strong><br />
-              Employee or Admin account
-            </p>
-          </div>
 
           <p className="text-center text-muted-foreground mt-6">
             Don't have an account?{' '}
