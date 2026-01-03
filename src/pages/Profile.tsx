@@ -21,6 +21,8 @@ import {
   Loader2,
 } from 'lucide-react';
 
+import { supabase } from '@/lib/supabase';
+
 export const Profile = () => {
   const { user, refreshProfile } = useAuth(); // Import refreshProfile
   const { toast } = useToast();

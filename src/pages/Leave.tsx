@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import { useState, useEffect } from 'react';
+=======
+import { useEffect, useState } from 'react';
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -20,11 +24,26 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
+<<<<<<< HEAD
+=======
+interface LeaveRequest {
+  id: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  submittedAt: string;
+}
+
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
 const leaveTypes = [
-  { value: 'paid', label: 'Paid Leave', color: 'bg-success/10 text-success border-success/30' },
+  { value: 'annual', label: 'Annual Leave', color: 'bg-success/10 text-success border-success/30' },
   { value: 'sick', label: 'Sick Leave', color: 'bg-warning/10 text-warning border-warning/30' },
-  { value: 'unpaid', label: 'Unpaid Leave', color: 'bg-muted text-muted-foreground border-border' },
+  { value: 'personal', label: 'Personal Leave', color: 'bg-muted text-muted-foreground border-border' },
 ];
 
 const statusConfig = {
@@ -37,16 +56,23 @@ export const Leave = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
+<<<<<<< HEAD
   const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+=======
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
   const [formData, setFormData] = useState({
-    type: 'paid' as 'paid' | 'sick' | 'unpaid',
+    type: 'annual',
     startDate: '',
     endDate: '',
     reason: '',
   });
 
+<<<<<<< HEAD
   const fetchData = async () => {
     if (!user) return;
     try {
@@ -79,6 +105,64 @@ export const Leave = () => {
       await fetchData(); // Refresh list
       setShowForm(false);
       setFormData({ type: 'paid', startDate: '', endDate: '', reason: '' });
+=======
+  useEffect(() => {
+    if (user) {
+      fetchRequests();
+    }
+  }, [user]);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map(r => ({
+        id: r.id,
+        type: r.type,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        reason: r.reason,
+        status: r.status as any,
+        submittedAt: r.created_at.split('T')[0]
+      }));
+
+      setRequests(formatted);
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert({
+          user_id: user?.id,
+          type: formData.type,
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          reason: formData.reason,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      await fetchRequests();
+      setShowForm(false);
+      setFormData({ type: 'annual', startDate: '', endDate: '', reason: '' });
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
 
       toast({
         title: 'Leave request submitted!',
@@ -86,26 +170,39 @@ export const Leave = () => {
       });
     } catch (error: any) {
       toast({
+<<<<<<< HEAD
         title: 'Submission failed',
         description: error.message,
         variant: 'destructive',
       });
     } finally {
       setIsSubmitting(false);
+=======
+        title: 'Error submitting request',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setSubmitting(false);
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
     }
   };
 
   const leaveBalance = {
-    paid: 15,
+    annual: 15,
     sick: 10,
-    unpaid: 'Unlimited',
+    personal: 5,
   };
 
   // Calculate used leave from APPROVED requests only
   const usedLeave = {
+<<<<<<< HEAD
     paid: requests.filter((r) => r.type === 'paid' && r.status === 'approved').length, // Simplified day calc
+=======
+    annual: requests.filter((r) => r.type === 'annual' && r.status === 'approved').length,
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
     sick: requests.filter((r) => r.type === 'sick' && r.status === 'approved').length,
-    unpaid: 0,
+    personal: requests.filter((r) => r.type === 'personal' && r.status === 'approved').length,
   };
 
   return (
@@ -240,11 +337,19 @@ export const Leave = () => {
                 </div>
 
                 <div className="flex gap-3">
+<<<<<<< HEAD
                   <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)} disabled={isSubmitting}>
                     Cancel
                   </Button>
                   <Button type="submit" variant="gradient" className="flex-1" disabled={isSubmitting}>
                     {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Request'}
+=======
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)} disabled={submitting}>
+                    Cancel
+                  </Button>
+                  <Button type="submit" variant="gradient" className="flex-1" disabled={submitting}>
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Request'}
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
                   </Button>
                 </div>
               </form>
@@ -265,9 +370,62 @@ export const Leave = () => {
           </h2>
 
           <div className="space-y-4">
+<<<<<<< HEAD
             {isLoading ? (
               <div className="flex justify-center p-8">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
+=======
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : requests.map((request, index) => {
+              const config = statusConfig[request.status];
+              const StatusIcon = config.icon;
+              const typeConfig = leaveTypes.find((t) => t.value === request.type);
+
+              return (
+                <motion.div
+                  key={request.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border border-border gap-4"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className={cn('px-3 py-1 rounded-full text-xs font-medium border', typeConfig?.color)}>
+                      {typeConfig?.label}
+                    </div>
+                    <div>
+                      <p className="font-medium">
+                        {new Date(request.startDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                        })}{' '}
+                        -{' '}
+                        {new Date(request.endDate).toLocaleDateString('en-US', {
+                          month: 'short',
+                          day: 'numeric',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <p className="text-sm text-muted-foreground">{request.reason}</p>
+                    </div>
+                  </div>
+
+                  <div className={cn('flex items-center gap-2 px-3 py-1 rounded-full self-start md:self-auto', config.bg)}>
+                    <StatusIcon className={cn('w-4 h-4', config.color)} />
+                    <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
+                  </div>
+                </motion.div>
+              );
+            })}
+
+            {!loading && requests.length === 0 && (
+              <div className="text-center py-12 text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>No leave requests yet</p>
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
               </div>
             ) : (
               <>

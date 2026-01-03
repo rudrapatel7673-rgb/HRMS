@@ -15,8 +15,9 @@ import {
   LogOut,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const cardVariants = {
   hidden: { opacity: 0, y: 20 },
@@ -30,24 +31,140 @@ const cardVariants = {
 export const Dashboard = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
   const [isCheckedIn, setIsCheckedIn] = useState(false);
-  const [checkInTime, setCheckInTime] = useState<Date | null>(null);
+  const [checkInTime, setCheckInTime] = useState<string | null>(null);
+  const [stats, setStats] = useState({
+    totalEmployees: 0,
+    presentToday: 0,
+    pendingLeaves: 0,
+    newRequests: 0
+  });
 
-  const handleCheckIn = () => {
-    setIsCheckedIn(true);
-    setCheckInTime(new Date());
-    toast({
-      title: 'Checked in!',
-      description: `You checked in at ${new Date().toLocaleTimeString()}`,
-    });
+  useEffect(() => {
+    if (user) {
+      fetchStatus();
+      if (user.role === 'admin') {
+        fetchAdminStats();
+      }
+    }
+  }, [user]);
+
+  const fetchStatus = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (error) throw error;
+      if (data) {
+        setIsCheckedIn(!!data.check_in && !data.check_out);
+        setCheckInTime(data.check_in);
+      }
+    } catch (error) {
+      console.error('Error fetching dashboard status:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCheckOut = () => {
-    setIsCheckedIn(false);
-    toast({
-      title: 'Checked out!',
-      description: `You checked out at ${new Date().toLocaleTimeString()}`,
-    });
+  const fetchAdminStats = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Total Employees
+      const { count: empCount } = await supabase
+        .from('profiles')
+        .select('*', { count: 'exact', head: true });
+
+      // Present Today
+      const { count: presentCount } = await supabase
+        .from('attendance')
+        .select('*', { count: 'exact', head: true })
+        .eq('date', today);
+
+      // Pending Leaves
+      const { count: pendingCount } = await supabase
+        .from('leave_requests')
+        .select('*', { count: 'exact', head: true })
+        .eq('status', 'pending');
+
+      setStats({
+        totalEmployees: empCount || 0,
+        presentToday: presentCount || 0,
+        pendingLeaves: pendingCount || 0,
+        newRequests: pendingCount || 0 // For now mapping new to pending
+      });
+    } catch (error) {
+      console.error('Error fetching admin stats:', error);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .upsert({
+          user_id: user?.id,
+          date: today,
+          check_in: timeStr,
+          status: 'present'
+        });
+
+      if (error) throw error;
+
+      setIsCheckedIn(true);
+      setCheckInTime(timeStr);
+      toast({
+        title: 'Checked in!',
+        description: `You checked in at ${now.toLocaleTimeString()}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleCheckOut = async () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .update({
+          check_out: timeStr,
+          status: 'present'
+        })
+        .eq('user_id', user?.id)
+        .eq('date', today);
+
+      if (error) throw error;
+
+      setIsCheckedIn(false);
+      toast({
+        title: 'Checked out!',
+        description: `You checked out at ${now.toLocaleTimeString()}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   const employeeCards = [
@@ -154,7 +271,7 @@ export const Dashboard = () => {
               </p>
               {checkInTime && isCheckedIn && (
                 <p className="text-xs text-muted-foreground">
-                  Since {checkInTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  Since {checkInTime.substring(0, 5)}
                 </p>
               )}
             </div>
@@ -162,6 +279,7 @@ export const Dashboard = () => {
               onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
               variant={isCheckedIn ? 'outline' : 'gradient'}
               className="gap-2"
+              disabled={loading}
             >
               {isCheckedIn ? (
                 <>
@@ -196,7 +314,12 @@ export const Dashboard = () => {
                   <h3 className="font-semibold text-lg mb-1">{card.title}</h3>
                   <p className="text-sm text-muted-foreground mb-3">{card.description}</p>
                   {'stat' in card && (
-                    <p className="text-sm font-medium text-primary">{(card as { stat: string }).stat}</p>
+                    <p className="text-sm font-medium text-primary">
+                      {card.title === 'Employees' ? `${stats.totalEmployees} active` :
+                        card.title === 'Attendance' ? `${stats.totalEmployees ? Math.round((stats.presentToday / stats.totalEmployees) * 100) : 0}% today` :
+                          card.title === 'Approvals' ? `${stats.pendingLeaves} pending` :
+                            (card as { stat: string }).stat}
+                    </p>
                   )}
                   <div className="flex items-center text-primary text-sm font-medium mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     View <ArrowRight className="w-4 h-4 ml-1" />
@@ -221,19 +344,19 @@ export const Dashboard = () => {
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
-                <p className="text-3xl font-bold gradient-text">24</p>
+                <p className="text-3xl font-bold gradient-text">{stats.totalEmployees}</p>
                 <p className="text-sm text-muted-foreground">Total Employees</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-success">22</p>
+                <p className="text-3xl font-bold text-success">{stats.presentToday}</p>
                 <p className="text-sm text-muted-foreground">Present Today</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-warning">5</p>
+                <p className="text-3xl font-bold text-warning">{stats.pendingLeaves}</p>
                 <p className="text-sm text-muted-foreground">Pending Leaves</p>
               </div>
               <div>
-                <p className="text-3xl font-bold text-primary">3</p>
+                <p className="text-3xl font-bold text-primary">{stats.newRequests}</p>
                 <p className="text-sm text-muted-foreground">New Requests</p>
               </div>
             </div>

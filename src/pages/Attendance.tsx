@@ -19,6 +19,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 const statusConfig = {
   present: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', label: 'Present' },
@@ -160,83 +161,100 @@ export const Attendance = () => {
                 {todayRecord?.check_in ? (
                   <>
                     Checked in at{' '}
-                    <span className="text-primary font-medium">{todayRecord.check_in}</span>
-                    {todayRecord.check_out && (
-                      <> • Checked out at <span className="text-primary font-medium">{todayRecord.check_out}</span></>
-                    )}
+<<<<<<< HEAD
+  <span className="text-primary font-medium">{todayRecord.check_in}</span>
+  {
+    todayRecord.check_out && (
+      <> • Checked out at <span className="text-primary font-medium">{todayRecord.check_out}</span></>
+    )
+  }
+=======
+                    <span className="text-primary font-medium">{todayRecord?.checkIn}</span>
+                  </>
+                ) : todayRecord?.checkOut ? (
+                  <>
+                    Completed your day at{' '}
+                    <span className="text-primary font-medium">{todayRecord.checkOut}</span>
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
                   </>
                 ) : (
-                  'Ready to start your day?'
-                )}
-              </p>
-            </div>
+  'Ready to start your day?'
+)}
+              </p >
+            </div >
 
-            <div className="flex items-center gap-4">
-              <div className="text-center">
-                <div className="text-4xl font-bold gradient-text">
-                  {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                </div>
-                <p className="text-sm text-muted-foreground">Current Time</p>
-              </div>
+  <div className="flex items-center gap-4">
+    <div className="text-center">
+      <div className="text-4xl font-bold gradient-text">
+        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+      </div>
+      <p className="text-sm text-muted-foreground">Current Time</p>
+    </div>
 
-              <Button
-                onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
-                variant={isCheckedIn ? 'outline' : 'gradient'}
-                size="xl"
-                className="gap-3"
-                disabled={isActionLoading || (!!todayRecord?.check_out)} // Disable if already checked out for the day
-              >
-                {isActionLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : isCheckedIn ? (
-                  <>
-                    <LogOut className="w-5 h-5" />
-                    Check Out
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="w-5 h-5" />
-                    {todayRecord?.check_out ? "Day Complete" : "Check In"}
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
-        </motion.div>
+    <Button
+      onClick={isCheckedIn ? handleCheckOut : handleCheckIn}
+      variant={isCheckedIn ? 'outline' : 'gradient'}
+      size="xl"
+      className="gap-3"
+<<<<<<< HEAD
+      disabled={isActionLoading || (!!todayRecord?.check_out)} // Disable if already checked out for the day
+=======
+                disabled={loading || (!isCheckedIn && !!todayRecord?.checkOut)}
+>>>>>>> 21d4fdfa03e28ae29f4dfd520899e332a1999922
+    >
+      {isActionLoading ? (
+        <Loader2 className="w-5 h-5 animate-spin" />
+      ) : isCheckedIn ? (
+        <>
+          <LogOut className="w-5 h-5" />
+          Check Out
+        </>
+      ) : (
+        <>
+          <LogIn className="w-5 h-5" />
+          {todayRecord?.check_out ? "Day Complete" : "Check In"}
+        </>
+      )}
+    </Button>
+  </div>
+          </div >
+        </motion.div >
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          {[
-            { label: 'Present Days', value: presentDays, icon: CheckCircle, color: 'text-success' },
-            { label: 'Total Hours', value: `${totalHours.toFixed(1)}h`, icon: Clock, color: 'text-primary' },
-            { label: 'Late Days', value: lateDays, icon: AlertCircle, color: 'text-warning' },
-            { label: 'Absent Days', value: absentDays, icon: XCircle, color: 'text-destructive' },
+  {/* Stats */ }
+  < div className = "grid grid-cols-2 md:grid-cols-4 gap-4" >
+  {
+    [
+    { label: 'Present Days', value: presentDays, icon: CheckCircle, color: 'text-success' },
+    { label: 'Total Hours', value: `${totalHours.toFixed(1)}h`, icon: Clock, color: 'text-primary' },
+    { label: 'Late Days', value: lateDays, icon: AlertCircle, color: 'text-warning' },
+    { label: 'Absent Days', value: absentDays, icon: XCircle, color: 'text-destructive' },
           ].map((stat, index) => (
-            <motion.div
-              key={stat.label}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.2 + index * 0.05 }}
-              className="glass-card rounded-2xl p-4"
-            >
-              <div className="flex items-center gap-3">
-                <stat.icon className={cn('w-5 h-5', stat.color)} />
-                <div>
-                  <p className={cn('text-2xl font-bold', stat.color)}>{stat.value}</p>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+      <motion.div
+        key={stat.label}
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2 + index * 0.05 }}
+        className="glass-card rounded-2xl p-4"
+      >
+        <div className="flex items-center gap-3">
+          <stat.icon className={cn('w-5 h-5', stat.color)} />
+          <div>
+            <p className={cn('text-2xl font-bold', stat.color)}>{stat.value}</p>
+            <p className="text-sm text-muted-foreground">{stat.label}</p>
+          </div>
         </div>
+      </motion.div>
+    ))
+  }
+        </div >
 
-        {/* Weekly View */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="glass-card rounded-3xl p-6"
-        >
+  {/* Weekly View */ }
+  < motion.div
+initial = {{ opacity: 0, y: 20 }}
+animate = {{ opacity: 1, y: 0 }}
+transition = {{ delay: 0.3 }}
+className = "glass-card rounded-3xl p-6"
+  >
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <Calendar className="w-5 h-5" />
@@ -299,8 +317,8 @@ export const Attendance = () => {
               </div>
             )}
           </div>
-        </motion.div>
-      </div>
-    </DashboardLayout>
+        </motion.div >
+      </div >
+    </DashboardLayout >
   );
 };
