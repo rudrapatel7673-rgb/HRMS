@@ -94,7 +94,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
       let finalProfile = profile;
 
-      // Fallback logic remains same...
+      // Fallback: If profile doesn't exist (e.g. trigger failed or manual insert), create it
       if (!finalProfile) {
         console.warn('Profile not found for user, attempting to create one...');
         const { data: newProfile, error: createError } = await supabase
@@ -166,29 +166,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const login = async (email: string, password: string) => {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      toast({
-        title: "Login failed",
-        description: error.message,
-        variant: "destructive",
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
+
+      if (error) {
+        toast({
+          title: "Login failed",
+          description: error.message,
+          variant: "destructive",
+        });
+        throw error;
+      }
+
+      if (data.session) {
+        // Explicitly wait for profile fetch to complete
+        await fetchProfile(data.session.user.id, data.session.user.email!);
+      }
+
+      return data.user;
+    } catch (error) {
+      console.error("Critical Login Error:", error);
       throw error;
     }
-
-    if (data.session) {
-      // Explicitly wait for profile fetch to complete
-      // This will populate the 'user' state with the correct User object (not the raw Supabase user)
-      await fetchProfile(data.session.user.id, data.session.user.email!);
-    }
-
-    return data.user;
   };
-
 
   const signup = async (data: SignupData): Promise<boolean> => {
     try {
