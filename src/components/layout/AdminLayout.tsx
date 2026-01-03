@@ -1,12 +1,12 @@
 import { ReactNode, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { 
-  LayoutDashboard, 
-  Users, 
-  Calendar, 
-  FileText, 
-  DollarSign, 
-  BarChart3, 
+import {
+  LayoutDashboard,
+  Users,
+  Calendar,
+  FileText,
+  DollarSign,
+  BarChart3,
   LogOut,
   Menu,
   X,
@@ -53,7 +53,7 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
     <div className="min-h-screen bg-background flex">
       {/* Sidebar Overlay (Mobile) */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-foreground/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
@@ -67,8 +67,8 @@ const AdminLayout = ({ children }: AdminLayoutProps) => {
       `}>
         {/* Sidebar Header */}
         <div className="p-6 border-b border-sidebar-border flex items-center justify-between">
-          <Logo size="sm" showText={true} />
-          <button 
+          <Logo size="sm" showText={true} className="text-sidebar-foreground" />
+          <button
             onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-sidebar-foreground hover:text-sidebar-primary"
           >

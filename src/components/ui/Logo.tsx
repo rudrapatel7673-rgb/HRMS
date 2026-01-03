@@ -5,7 +5,7 @@ interface LogoProps {
   showText?: boolean;
 }
 
-const Logo = ({ size = 'md', showText = true }: LogoProps) => {
+const Logo = ({ size = 'md', showText = true, className }: LogoProps & { className?: string }) => {
   const sizeClasses = {
     sm: 'w-8 h-8',
     md: 'w-10 h-10',
@@ -24,7 +24,7 @@ const Logo = ({ size = 'md', showText = true }: LogoProps) => {
         <Users className="w-1/2 h-1/2 text-primary-foreground" />
       </div>
       {showText && (
-        <span className={`${textClasses[size]} font-bold text-foreground`}>
+        <span className={`${textClasses[size]} font-bold ${className || 'text-foreground'}`}>
           WorkFlow<span className="text-primary">HR</span>
         </span>
       )}
