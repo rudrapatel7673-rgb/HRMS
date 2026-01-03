@@ -19,21 +19,45 @@ import {
   X,
 } from 'lucide-react';
 
+import { supabase } from '@/lib/supabase';
+
 export const Profile = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [isEditing, setIsEditing] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     phone: user?.phone || '',
     address: user?.address || '',
   });
 
-  const handleSave = () => {
-    toast({
-      title: 'Profile updated!',
-      description: 'Your changes have been saved successfully.',
-    });
-    setIsEditing(false);
+  const handleSave = async () => {
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          phone: formData.phone,
+          address: formData.address,
+        })
+        .eq('id', user?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Profile updated!',
+        description: 'Your changes have been saved successfully.',
+      });
+      setIsEditing(false);
+    } catch (error: any) {
+      toast({
+        title: 'Error updating profile',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   const profileFields = [

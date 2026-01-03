@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -14,12 +14,15 @@ import {
   XCircle,
   AlertCircle,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface LeaveRequest {
   id: string;
-  type: 'paid' | 'sick' | 'unpaid';
+  type: string;
   startDate: string;
   endDate: string;
   reason: string;
@@ -27,40 +30,10 @@ interface LeaveRequest {
   submittedAt: string;
 }
 
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: '1',
-    type: 'paid',
-    startDate: '2026-01-15',
-    endDate: '2026-01-17',
-    reason: 'Family vacation',
-    status: 'approved',
-    submittedAt: '2025-12-28',
-  },
-  {
-    id: '2',
-    type: 'sick',
-    startDate: '2025-12-20',
-    endDate: '2025-12-20',
-    reason: 'Doctor appointment',
-    status: 'approved',
-    submittedAt: '2025-12-18',
-  },
-  {
-    id: '3',
-    type: 'paid',
-    startDate: '2026-02-10',
-    endDate: '2026-02-14',
-    reason: 'Personal time off',
-    status: 'pending',
-    submittedAt: '2025-12-30',
-  },
-];
-
 const leaveTypes = [
-  { value: 'paid', label: 'Paid Leave', color: 'bg-success/10 text-success border-success/30' },
+  { value: 'annual', label: 'Annual Leave', color: 'bg-success/10 text-success border-success/30' },
   { value: 'sick', label: 'Sick Leave', color: 'bg-warning/10 text-warning border-warning/30' },
-  { value: 'unpaid', label: 'Unpaid Leave', color: 'bg-muted text-muted-foreground border-border' },
+  { value: 'personal', label: 'Personal Leave', color: 'bg-muted text-muted-foreground border-border' },
 ];
 
 const statusConfig = {
@@ -70,46 +43,101 @@ const statusConfig = {
 };
 
 export const Leave = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [requests, setRequests] = useState(mockLeaveRequests);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
   const [formData, setFormData] = useState({
-    type: 'paid' as 'paid' | 'sick' | 'unpaid',
+    type: 'annual',
     startDate: '',
     endDate: '',
     reason: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  useEffect(() => {
+    if (user) {
+      fetchRequests();
+    }
+  }, [user]);
+
+  const fetchRequests = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('leave_requests')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+
+      const formatted = (data || []).map(r => ({
+        id: r.id,
+        type: r.type,
+        startDate: r.start_date,
+        endDate: r.end_date,
+        reason: r.reason,
+        status: r.status as any,
+        submittedAt: r.created_at.split('T')[0]
+      }));
+
+      setRequests(formatted);
+    } catch (error) {
+      console.error('Error fetching leave requests:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newRequest: LeaveRequest = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...formData,
-      status: 'pending',
-      submittedAt: new Date().toISOString().split('T')[0],
-    };
-    
-    setRequests([newRequest, ...requests]);
-    setShowForm(false);
-    setFormData({ type: 'paid', startDate: '', endDate: '', reason: '' });
-    
-    toast({
-      title: 'Leave request submitted!',
-      description: 'Your request is pending approval.',
-    });
+    setSubmitting(true);
+
+    try {
+      const { error } = await supabase
+        .from('leave_requests')
+        .insert({
+          user_id: user?.id,
+          type: formData.type,
+          start_date: formData.startDate,
+          end_date: formData.endDate,
+          reason: formData.reason,
+          status: 'pending'
+        });
+
+      if (error) throw error;
+
+      await fetchRequests();
+      setShowForm(false);
+      setFormData({ type: 'annual', startDate: '', endDate: '', reason: '' });
+
+      toast({
+        title: 'Leave request submitted!',
+        description: 'Your request is pending approval.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error submitting request',
+        description: error.message,
+        variant: 'destructive'
+      });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const leaveBalance = {
-    paid: 15,
+    annual: 15,
     sick: 10,
-    unpaid: 'Unlimited',
+    personal: 5,
   };
 
   const usedLeave = {
-    paid: requests.filter((r) => r.type === 'paid' && r.status === 'approved').length * 2,
+    annual: requests.filter((r) => r.type === 'annual' && r.status === 'approved').length,
     sick: requests.filter((r) => r.type === 'sick' && r.status === 'approved').length,
-    unpaid: 0,
+    personal: requests.filter((r) => r.type === 'personal' && r.status === 'approved').length,
   };
 
   return (
@@ -240,11 +268,11 @@ export const Leave = () => {
                 </div>
 
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)}>
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)} disabled={submitting}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="gradient" className="flex-1">
-                    Submit Request
+                  <Button type="submit" variant="gradient" className="flex-1" disabled={submitting}>
+                    {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Request'}
                   </Button>
                 </div>
               </form>
@@ -265,7 +293,11 @@ export const Leave = () => {
           </h2>
 
           <div className="space-y-4">
-            {requests.map((request, index) => {
+            {loading ? (
+              <div className="flex justify-center py-12">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            ) : requests.map((request, index) => {
               const config = statusConfig[request.status];
               const StatusIcon = config.icon;
               const typeConfig = leaveTypes.find((t) => t.value === request.type);
@@ -307,7 +339,7 @@ export const Leave = () => {
               );
             })}
 
-            {requests.length === 0 && (
+            {!loading && requests.length === 0 && (
               <div className="text-center py-12 text-muted-foreground">
                 <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
                 <p>No leave requests yet</p>

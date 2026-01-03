@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
@@ -16,6 +16,7 @@ import {
   ChevronRight,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/lib/supabase';
 
 interface AttendanceRecord {
   date: string;
@@ -45,49 +46,145 @@ const statusConfig = {
 export const Attendance = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isCheckedIn, setIsCheckedIn] = useState(mockAttendance[0].checkIn !== null);
+  const [loading, setLoading] = useState(true);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
   const [currentWeek, setCurrentWeek] = useState(0);
-  const [attendance, setAttendance] = useState(mockAttendance);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [todayRecord, setTodayRecord] = useState<AttendanceRecord | null>(null);
 
-  const handleCheckIn = () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-    setAttendance((prev) => {
-      const updated = [...prev];
-      if (updated[0]) {
-        updated[0] = { ...updated[0], checkIn: timeStr, status: 'present' };
+  useEffect(() => {
+    if (user) {
+      fetchAttendance();
+    }
+  }, [user, currentWeek]);
+
+  const fetchAttendance = async () => {
+    try {
+      setLoading(true);
+      const today = new Date().toISOString().split('T')[0];
+
+      // Fetch today's record
+      const { data: todayData, error: todayError } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', user?.id)
+        .eq('date', today)
+        .maybeSingle();
+
+      if (todayError) throw todayError;
+
+      if (todayData) {
+        const record: AttendanceRecord = {
+          date: todayData.date,
+          checkIn: todayData.check_in?.substring(0, 5) || null,
+          checkOut: todayData.check_out?.substring(0, 5) || null,
+          status: todayData.status as any,
+          hours: Number(todayData.hours) || 0
+        };
+        setTodayRecord(record);
+        setIsCheckedIn(!!record.checkIn && !record.checkOut);
+      } else {
+        setTodayRecord(null);
+        setIsCheckedIn(false);
       }
-      return updated;
-    });
-    
-    setIsCheckedIn(true);
-    toast({
-      title: 'Checked in successfully!',
-      description: `You checked in at ${now.toLocaleTimeString()}`,
-    });
+
+      // Fetch history
+      const { data: historyData, error: historyError } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('date', { ascending: false })
+        .limit(30);
+
+      if (historyError) throw historyError;
+
+      const formattedHistory = (historyData || []).map(d => ({
+        date: d.date,
+        checkIn: d.check_in?.substring(0, 5) || null,
+        checkOut: d.check_out?.substring(0, 5) || null,
+        status: d.status as any,
+        hours: Number(d.hours) || 0
+      }));
+
+      setAttendance(formattedHistory);
+    } catch (error) {
+      console.error('Error fetching attendance:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleCheckOut = () => {
+  const handleCheckIn = async () => {
     const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-    setAttendance((prev) => {
-      const updated = [...prev];
-      if (updated[0] && updated[0].checkIn) {
-        const checkInTime = updated[0].checkIn.split(':').map(Number);
+    const today = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+    try {
+      const { error } = await supabase
+        .from('attendance')
+        .upsert({
+          user_id: user?.id,
+          date: today,
+          check_in: timeStr,
+          status: 'present'
+        });
+
+      if (error) throw error;
+
+      await fetchAttendance();
+      setIsCheckedIn(true);
+      toast({
+        title: 'Checked in successfully!',
+        description: `You checked in at ${now.toLocaleTimeString()}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error checking in',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
+  };
+
+  const handleCheckOut = async () => {
+    const now = new Date();
+    const today = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+
+    try {
+      // Calculate hours if check_in exists
+      let hours = 0;
+      if (todayRecord?.checkIn) {
+        const checkInTime = todayRecord.checkIn.split(':').map(Number);
         const checkOutTime = timeStr.split(':').map(Number);
-        const hours = (checkOutTime[0] - checkInTime[0]) + (checkOutTime[1] - checkInTime[1]) / 60;
-        updated[0] = { ...updated[0], checkOut: timeStr, hours: Math.round(hours * 100) / 100 };
+        hours = (checkOutTime[0] - checkInTime[0]) + (checkOutTime[1] - checkInTime[1]) / 60;
+        hours = Math.max(0, Math.round(hours * 100) / 100);
       }
-      return updated;
-    });
-    
-    setIsCheckedIn(false);
-    toast({
-      title: 'Checked out successfully!',
-      description: `You checked out at ${now.toLocaleTimeString()}`,
-    });
+
+      const { error } = await supabase
+        .from('attendance')
+        .update({
+          check_out: timeStr,
+          hours: hours
+        })
+        .eq('user_id', user?.id)
+        .eq('date', today);
+
+      if (error) throw error;
+
+      await fetchAttendance();
+      setIsCheckedIn(false);
+      toast({
+        title: 'Checked out successfully!',
+        description: `You checked out at ${now.toLocaleTimeString()}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Error checking out',
+        description: error.message,
+        variant: 'destructive'
+      });
+    }
   };
 
   const getWeekDates = () => {
@@ -139,7 +236,12 @@ export const Attendance = () => {
                 {isCheckedIn ? (
                   <>
                     Checked in at{' '}
-                    <span className="text-primary font-medium">{attendance[0]?.checkIn}</span>
+                    <span className="text-primary font-medium">{todayRecord?.checkIn}</span>
+                  </>
+                ) : todayRecord?.checkOut ? (
+                  <>
+                    Completed your day at{' '}
+                    <span className="text-primary font-medium">{todayRecord.checkOut}</span>
                   </>
                 ) : (
                   'Ready to start your day?'
@@ -160,6 +262,7 @@ export const Attendance = () => {
                 variant={isCheckedIn ? 'outline' : 'gradient'}
                 size="xl"
                 className="gap-3"
+                disabled={loading || (!isCheckedIn && !!todayRecord?.checkOut)}
               >
                 {isCheckedIn ? (
                   <>
