@@ -136,7 +136,7 @@ export const Dashboard = () => {
               animate={{ opacity: 1, x: 0 }}
               className="text-3xl font-bold"
             >
-              Welcome back, {user?.name?.split(' ')[0] || 'User'}! 👋
+              Welcome back, {(user?.name === 'User' ? user?.email.split('@')[0] : user?.name) || 'User'}! 👋
             </motion.h1>
             <p className="text-muted-foreground mt-1">{currentDate}</p>
           </div>
@@ -270,6 +270,6 @@ export const Dashboard = () => {
           </div>
         </motion.div>
       </div>
-    </DashboardLayout>
+    </DashboardLayout >
   );
 };

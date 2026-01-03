@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -6,6 +6,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { leaveApi } from '@/services/api';
+import { LeaveRequest } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   Calendar,
   Plus,
@@ -14,48 +17,9 @@ import {
   XCircle,
   AlertCircle,
   X,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface LeaveRequest {
-  id: string;
-  type: 'paid' | 'sick' | 'unpaid';
-  startDate: string;
-  endDate: string;
-  reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-}
-
-const mockLeaveRequests: LeaveRequest[] = [
-  {
-    id: '1',
-    type: 'paid',
-    startDate: '2026-01-15',
-    endDate: '2026-01-17',
-    reason: 'Family vacation',
-    status: 'approved',
-    submittedAt: '2025-12-28',
-  },
-  {
-    id: '2',
-    type: 'sick',
-    startDate: '2025-12-20',
-    endDate: '2025-12-20',
-    reason: 'Doctor appointment',
-    status: 'approved',
-    submittedAt: '2025-12-18',
-  },
-  {
-    id: '3',
-    type: 'paid',
-    startDate: '2026-02-10',
-    endDate: '2026-02-14',
-    reason: 'Personal time off',
-    status: 'pending',
-    submittedAt: '2025-12-30',
-  },
-];
 
 const leaveTypes = [
   { value: 'paid', label: 'Paid Leave', color: 'bg-success/10 text-success border-success/30' },
@@ -70,9 +34,12 @@ const statusConfig = {
 };
 
 export const Leave = () => {
+  const { user } = useAuth();
   const { toast } = useToast();
   const [showForm, setShowForm] = useState(false);
-  const [requests, setRequests] = useState(mockLeaveRequests);
+  const [requests, setRequests] = useState<LeaveRequest[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     type: 'paid' as 'paid' | 'sick' | 'unpaid',
     startDate: '',
@@ -80,24 +47,52 @@ export const Leave = () => {
     reason: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      const data = await leaveApi.getRequests(user.id);
+      setRequests(data);
+    } catch (error) {
+      console.error('Failed to fetch leave requests:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [user]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    const newRequest: LeaveRequest = {
-      id: Math.random().toString(36).substr(2, 9),
-      ...formData,
-      status: 'pending',
-      submittedAt: new Date().toISOString().split('T')[0],
-    };
-    
-    setRequests([newRequest, ...requests]);
-    setShowForm(false);
-    setFormData({ type: 'paid', startDate: '', endDate: '', reason: '' });
-    
-    toast({
-      title: 'Leave request submitted!',
-      description: 'Your request is pending approval.',
-    });
+    if (!user) return;
+
+    setIsSubmitting(true);
+    try {
+      await leaveApi.createRequest(user.id, {
+        type: formData.type,
+        start_date: formData.startDate,
+        end_date: formData.endDate,
+        reason: formData.reason,
+      });
+
+      await fetchData(); // Refresh list
+      setShowForm(false);
+      setFormData({ type: 'paid', startDate: '', endDate: '', reason: '' });
+
+      toast({
+        title: 'Leave request submitted!',
+        description: 'Your request is pending approval.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Submission failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const leaveBalance = {
@@ -106,8 +101,9 @@ export const Leave = () => {
     unpaid: 'Unlimited',
   };
 
+  // Calculate used leave from APPROVED requests only
   const usedLeave = {
-    paid: requests.filter((r) => r.type === 'paid' && r.status === 'approved').length * 2,
+    paid: requests.filter((r) => r.type === 'paid' && r.status === 'approved').length, // Simplified day calc
     sick: requests.filter((r) => r.type === 'sick' && r.status === 'approved').length,
     unpaid: 0,
   };
@@ -175,7 +171,7 @@ export const Leave = () => {
             >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-bold">Request Leave</h2>
-                <Button variant="ghost" size="icon" onClick={() => setShowForm(false)}>
+                <Button variant="ghost" size="icon" onClick={() => setShowForm(false)} disabled={isSubmitting}>
                   <X className="w-5 h-5" />
                 </Button>
               </div>
@@ -195,6 +191,7 @@ export const Leave = () => {
                             ? 'border-primary bg-primary/5'
                             : 'border-border hover:border-primary/50'
                         )}
+                        disabled={isSubmitting}
                       >
                         <span className={cn('text-sm font-medium', formData.type === type.value ? 'text-primary' : 'text-muted-foreground')}>
                           {type.label}
@@ -213,6 +210,7 @@ export const Leave = () => {
                       value={formData.startDate}
                       onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="space-y-2">
@@ -223,6 +221,7 @@ export const Leave = () => {
                       value={formData.endDate}
                       onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
                 </div>
@@ -236,15 +235,16 @@ export const Leave = () => {
                     onChange={(e) => setFormData({ ...formData, reason: e.target.value })}
                     required
                     rows={3}
+                    disabled={isSubmitting}
                   />
                 </div>
 
                 <div className="flex gap-3">
-                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)}>
+                  <Button type="button" variant="ghost" className="flex-1" onClick={() => setShowForm(false)} disabled={isSubmitting}>
                     Cancel
                   </Button>
-                  <Button type="submit" variant="gradient" className="flex-1">
-                    Submit Request
+                  <Button type="submit" variant="gradient" className="flex-1" disabled={isSubmitting}>
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Submit Request'}
                   </Button>
                 </div>
               </form>
@@ -265,53 +265,61 @@ export const Leave = () => {
           </h2>
 
           <div className="space-y-4">
-            {requests.map((request, index) => {
-              const config = statusConfig[request.status];
-              const StatusIcon = config.icon;
-              const typeConfig = leaveTypes.find((t) => t.value === request.type);
-
-              return (
-                <motion.div
-                  key={request.id}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border border-border gap-4"
-                >
-                  <div className="flex items-start gap-4">
-                    <div className={cn('px-3 py-1 rounded-full text-xs font-medium border', typeConfig?.color)}>
-                      {typeConfig?.label}
-                    </div>
-                    <div>
-                      <p className="font-medium">
-                        {new Date(request.startDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                        })}{' '}
-                        -{' '}
-                        {new Date(request.endDate).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                        })}
-                      </p>
-                      <p className="text-sm text-muted-foreground">{request.reason}</p>
-                    </div>
-                  </div>
-
-                  <div className={cn('flex items-center gap-2 px-3 py-1 rounded-full self-start md:self-auto', config.bg)}>
-                    <StatusIcon className={cn('w-4 h-4', config.color)} />
-                    <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
-                  </div>
-                </motion.div>
-              );
-            })}
-
-            {requests.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>No leave requests yet</p>
+            {isLoading ? (
+              <div className="flex justify-center p-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
+            ) : (
+              <>
+                {requests.map((request, index) => {
+                  const config = statusConfig[request.status];
+                  const StatusIcon = config.icon;
+                  const typeConfig = leaveTypes.find((t) => t.value === request.type);
+
+                  return (
+                    <motion.div
+                      key={request.id}
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: index * 0.1 }}
+                      className="flex flex-col md:flex-row md:items-center justify-between p-4 rounded-xl border border-border gap-4"
+                    >
+                      <div className="flex items-start gap-4">
+                        <div className={cn('px-3 py-1 rounded-full text-xs font-medium border', typeConfig?.color)}>
+                          {typeConfig?.label}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {new Date(request.start_date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                            })}{' '}
+                            -{' '}
+                            {new Date(request.end_date).toLocaleDateString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              year: 'numeric',
+                            })}
+                          </p>
+                          <p className="text-sm text-muted-foreground">{request.reason}</p>
+                        </div>
+                      </div>
+
+                      <div className={cn('flex items-center gap-2 px-3 py-1 rounded-full self-start md:self-auto', config.bg)}>
+                        <StatusIcon className={cn('w-4 h-4', config.color)} />
+                        <span className={cn('text-sm font-medium', config.color)}>{config.label}</span>
+                      </div>
+                    </motion.div>
+                  );
+                })}
+
+                {requests.length === 0 && (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>No leave requests yet</p>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </motion.div>

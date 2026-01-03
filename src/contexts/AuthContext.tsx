@@ -25,6 +25,7 @@ interface AuthContextType {
   signup: (data: SignupData) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  refreshProfile: () => Promise<void>;
 }
 
 interface SignupData {
@@ -58,7 +59,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session) {
         // If session exists, try to fetch profile
-        await fetchProfile(session.user.id, session.user.email!);
+        // Don't await here to avoid blocking auth state change events
+        fetchProfile(session.user.id, session.user.email!);
       } else {
         setUser(null);
         setIsLoading(false);
@@ -72,40 +74,72 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       console.log('Fetching profile for:', userId);
 
-      // Create a promise that rejects after 5 seconds to prevent infinite hanging
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Profile fetch timed out')), 5000)
-      );
+      // Define internal fetch strategy with retries
+      const attemptFetch = async () => {
+        let finalProfile = null;
+        let attempts = 0;
+        const maxAttempts = 3;
 
-      // Wrap Supabase calls
-      const profilePromise = async () => {
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', userId)
-          .maybeSingle();
-        if (error) throw error;
-        return data;
+        while (attempts < maxAttempts && !finalProfile) {
+          attempts++;
+          try {
+            const { data, error } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', userId)
+              .maybeSingle();
+
+            if (!error && data) {
+              finalProfile = data;
+              break;
+            }
+          } catch (err) {
+            console.warn(`Profile fetch attempt ${attempts} failed:`, err);
+          }
+
+          // Wait before next attempt if not found (give trigger time)
+          if (!finalProfile && attempts < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+          }
+        }
+        return finalProfile;
       };
 
-      // Race against timeout
-      const profile = await Promise.race([profilePromise(), timeoutPromise]) as any;
-      console.log('Fetch result:', profile ? 'Found' : 'Not Found');
+      // Race the fetch against a strict 4-second timeout
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Profile fetch timed out')), 4000)
+      );
 
-      let finalProfile = profile;
+      let finalProfile: any = null;
+      try {
+        finalProfile = await Promise.race([attemptFetch(), timeout]);
+      } catch (err) {
+        console.warn('Profile fetch race completed with error/timeout:', err);
+      }
 
-      // Fallback: If profile doesn't exist (e.g. trigger failed or manual insert), create it
+      console.log('Fetch result:', finalProfile ? 'Found' : 'Not Found/Timed Out');
+
+      // Fallback: Only create if retry loop failed completely
       if (!finalProfile) {
-        console.warn('Profile not found for user, attempting to create one...');
+        console.warn('Profile not found for user after retries, attempting to create one...');
+
+        // Attempt to get metadata from the auth user to respect signup choices
+        const { data: authData } = await supabase.auth.getUser();
+        const meta = authData.user?.user_metadata || {};
+
+        const fallbackRole = meta.role || 'EMPLOYEE';
+        const fallbackName = meta.name || 'User';
+        const fallbackEmpId = meta.employee_id || 'EMP-' + Date.now();
+
         const { data: newProfile, error: createError } = await supabase
           .from('profiles')
           .insert([
             {
               id: userId,
               email: email,
-              full_name: 'User',
-              employee_id: 'EMP-' + Date.now(),
-              role: 'EMPLOYEE'
+              name: fallbackName,
+              employee_id: fallbackEmpId,
+              role: fallbackRole
             }
           ])
           .select()
@@ -119,45 +153,64 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       }
 
-      const { data: empProfile } = await supabase
-        .from('employee_profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
-
+      // Check if profile exists now
       if (finalProfile) {
-        console.log('Profile loaded successfully:', finalProfile);
         setUser({
           id: finalProfile.id,
-          name: finalProfile.full_name || 'User',
+          name: finalProfile.name || 'User',
           email: finalProfile.email || email,
-          role: (finalProfile.role as UserRole) || 'employee',
+          role: (finalProfile.role?.toLowerCase() as UserRole) || 'employee',
           employeeId: finalProfile.employee_id || 'EMP-000',
-          department: empProfile?.department,
-          position: empProfile?.designation,
-          phone: empProfile?.phone,
-          address: empProfile?.address,
-          joinDate: empProfile?.join_date,
-          avatar: empProfile?.profile_foto,
+          department: finalProfile.department,
+          position: finalProfile.position,
+          phone: finalProfile.phone,
+          address: finalProfile.address,
+          joinDate: finalProfile.join_date,
+          avatar: finalProfile.avatar_url,
         });
       } else {
+        // Ultimate Fallback - Use metadata if available
         console.warn("Using minimal user data as profile load failed completely.");
+
+        let fallbackRole: UserRole = 'employee';
+        try {
+          const { data: authData } = await supabase.auth.getUser();
+          const metaRole = authData.user?.user_metadata?.role;
+          if (metaRole) {
+            fallbackRole = metaRole.toLowerCase() as UserRole;
+          }
+        } catch (e) {
+          console.error('Error fetching metadata for fallback:', e);
+        }
+
         setUser({
           id: userId,
           name: 'User',
           email: email,
-          role: 'employee',
+          role: fallbackRole,
           employeeId: 'UNKNOWN',
         });
       }
     } catch (error) {
       console.error('Error in fetchProfile:', error);
+
+      let fallbackRole: UserRole = 'employee';
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        const metaRole = authData.user?.user_metadata?.role;
+        if (metaRole) {
+          fallbackRole = metaRole.toLowerCase() as UserRole;
+        }
+      } catch (e) {
+        console.error('Error fetching metadata for fallback (catch):', e);
+      }
+
       // Even on error/timeout, we allow login with minimal data if we have the ID/email
       setUser({
         id: userId,
         name: 'User',
         email: email,
-        role: 'employee',
+        role: fallbackRole,
         employeeId: 'UNKNOWN',
       });
     } finally {
@@ -200,9 +253,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password: data.password,
         options: {
           data: {
-            full_name: data.name,
+            name: data.name,
             employee_id: data.employeeId,
-            role: data.role,
+            role: data.role.toUpperCase(),
           },
         },
       });
@@ -230,8 +283,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setUser(null);
   };
 
+  const refreshProfile = async () => {
+    if (user) {
+      await fetchProfile(user.id, user.email);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout, isLoading, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );

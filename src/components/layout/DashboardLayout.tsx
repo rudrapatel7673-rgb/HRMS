@@ -81,17 +81,17 @@ export const DashboardLayout = ({ children }: DashboardLayoutProps) => {
           <div className="flex items-center gap-3 mb-3">
             <div className="w-12 h-12 rounded-full gradient-primary flex items-center justify-center ring-2 ring-primary/20">
               <span className="text-primary-foreground font-bold text-lg">
-                {user?.name?.charAt(0) || 'U'}
+                {(user?.name === 'User' ? user?.email?.charAt(0) : user?.name?.charAt(0)) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm truncate">{user?.name || 'User'}</p>
+              <p className="font-semibold text-sm truncate">{(user?.name === 'User' ? user?.email?.split('@')[0] : user?.name) || 'User'}</p>
               <p className="text-xs text-muted-foreground capitalize">{user?.role || 'Member'}</p>
             </div>
           </div>
           <div className="space-y-1 text-xs text-muted-foreground">
             <p className="truncate">{user?.email || ''}</p>
-            <p className="text-primary font-medium">ID: {user?.id || '...'}</p>
+
           </div>
         </div>
 

@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { attendanceApi } from '@/services/api';
+import { Attendance as AttendanceType } from '@/types';
 import {
   Clock,
   LogIn,
@@ -14,26 +16,9 @@ import {
   AlertCircle,
   ChevronLeft,
   ChevronRight,
+  Loader2,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-
-interface AttendanceRecord {
-  date: string;
-  checkIn: string | null;
-  checkOut: string | null;
-  status: 'present' | 'absent' | 'late' | 'half-day';
-  hours: number;
-}
-
-const mockAttendance: AttendanceRecord[] = [
-  { date: '2026-01-03', checkIn: '09:00', checkOut: null, status: 'present', hours: 0 },
-  { date: '2026-01-02', checkIn: '08:55', checkOut: '18:05', status: 'present', hours: 9.17 },
-  { date: '2026-01-01', checkIn: null, checkOut: null, status: 'absent', hours: 0 },
-  { date: '2025-12-31', checkIn: '09:30', checkOut: '18:00', status: 'late', hours: 8.5 },
-  { date: '2025-12-30', checkIn: '08:45', checkOut: '17:50', status: 'present', hours: 9.08 },
-  { date: '2025-12-29', checkIn: '09:00', checkOut: '13:00', status: 'half-day', hours: 4 },
-  { date: '2025-12-28', checkIn: '08:50', checkOut: '18:15', status: 'present', hours: 9.42 },
-];
 
 const statusConfig = {
   present: { icon: CheckCircle, color: 'text-success', bg: 'bg-success/10', label: 'Present' },
@@ -45,67 +30,103 @@ const statusConfig = {
 export const Attendance = () => {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [isCheckedIn, setIsCheckedIn] = useState(mockAttendance[0].checkIn !== null);
-  const [currentWeek, setCurrentWeek] = useState(0);
-  const [attendance, setAttendance] = useState(mockAttendance);
+  const [isCheckedIn, setIsCheckedIn] = useState(false);
+  const [todayRecord, setTodayRecord] = useState<AttendanceType | null>(null);
+  const [attendanceHistory, setAttendanceHistory] = useState<AttendanceType[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isActionLoading, setIsActionLoading] = useState(false);
+  const [currentWeekOffset, setCurrentWeekOffset] = useState(0);
 
-  const handleCheckIn = () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-    setAttendance((prev) => {
-      const updated = [...prev];
-      if (updated[0]) {
-        updated[0] = { ...updated[0], checkIn: timeStr, status: 'present' };
-      }
-      return updated;
-    });
-    
-    setIsCheckedIn(true);
-    toast({
-      title: 'Checked in successfully!',
-      description: `You checked in at ${now.toLocaleTimeString()}`,
-    });
-  };
+  const fetchData = async () => {
+    if (!user) return;
+    try {
+      const [today, history] = await Promise.all([
+        attendanceApi.getTodayRecord(user.id),
+        attendanceApi.getHistory(user.id)
+      ]);
 
-  const handleCheckOut = () => {
-    const now = new Date();
-    const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    
-    setAttendance((prev) => {
-      const updated = [...prev];
-      if (updated[0] && updated[0].checkIn) {
-        const checkInTime = updated[0].checkIn.split(':').map(Number);
-        const checkOutTime = timeStr.split(':').map(Number);
-        const hours = (checkOutTime[0] - checkInTime[0]) + (checkOutTime[1] - checkInTime[1]) / 60;
-        updated[0] = { ...updated[0], checkOut: timeStr, hours: Math.round(hours * 100) / 100 };
-      }
-      return updated;
-    });
-    
-    setIsCheckedIn(false);
-    toast({
-      title: 'Checked out successfully!',
-      description: `You checked out at ${now.toLocaleTimeString()}`,
-    });
-  };
-
-  const getWeekDates = () => {
-    const today = new Date();
-    today.setDate(today.getDate() - currentWeek * 7);
-    const dates = [];
-    for (let i = 0; i < 7; i++) {
-      const date = new Date(today);
-      date.setDate(today.getDate() - i);
-      dates.push(date);
+      setTodayRecord(today);
+      setIsCheckedIn(!!today && !today.check_out);
+      setAttendanceHistory(history);
+    } catch (error) {
+      console.error('Failed to fetch attendance:', error);
+    } finally {
+      setIsLoading(false);
     }
-    return dates;
   };
 
-  const weekDates = getWeekDates();
+  useEffect(() => {
+    fetchData();
+  }, [user]);
 
-  const presentDays = attendance.filter((a) => a.status === 'present' || a.status === 'late').length;
-  const totalHours = attendance.reduce((acc, a) => acc + a.hours, 0);
+  const handleCheckIn = async () => {
+    if (!user) return;
+    setIsActionLoading(true);
+    try {
+      const record = await attendanceApi.checkIn(user.id);
+      setTodayRecord(record);
+      setIsCheckedIn(true);
+      await fetchData(); // Refresh list
+      toast({
+        title: 'Checked in successfully!',
+        description: `You checked in at ${record.check_in}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Check-in failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!todayRecord) return;
+    setIsActionLoading(true);
+    try {
+      const record = await attendanceApi.checkOut(todayRecord.id);
+      setTodayRecord(record);
+      setIsCheckedIn(false);
+      await fetchData(); // Refresh list
+      toast({
+        title: 'Checked out successfully!',
+        description: `You checked out at ${record.check_out}`,
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Check-out failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsActionLoading(false);
+    }
+  };
+
+  const presentDays = attendanceHistory.filter((a) => a.status === 'present' || a.status === 'late').length;
+  const totalHours = attendanceHistory.reduce((acc, a) => acc + (a.hours || 0), 0);
+  const lateDays = attendanceHistory.filter((a) => a.status === 'late').length;
+  const absentDays = attendanceHistory.filter((a) => a.status === 'absent').length;
+
+  const getWeekData = () => {
+    // Logic to filter history by current week offset could go here
+    // For simplicity showing last 7 records or filtering
+    return attendanceHistory.slice(currentWeekOffset * 7, (currentWeekOffset + 1) * 7);
+  };
+
+  const weekRecords = getWeekData();
+
+  if (isLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex h-[50vh] items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
@@ -136,10 +157,13 @@ export const Attendance = () => {
                 })}
               </h2>
               <p className="text-muted-foreground">
-                {isCheckedIn ? (
+                {todayRecord?.check_in ? (
                   <>
                     Checked in at{' '}
-                    <span className="text-primary font-medium">{attendance[0]?.checkIn}</span>
+                    <span className="text-primary font-medium">{todayRecord.check_in}</span>
+                    {todayRecord.check_out && (
+                      <> • Checked out at <span className="text-primary font-medium">{todayRecord.check_out}</span></>
+                    )}
                   </>
                 ) : (
                   'Ready to start your day?'
@@ -160,8 +184,11 @@ export const Attendance = () => {
                 variant={isCheckedIn ? 'outline' : 'gradient'}
                 size="xl"
                 className="gap-3"
+                disabled={isActionLoading || (!!todayRecord?.check_out)} // Disable if already checked out for the day
               >
-                {isCheckedIn ? (
+                {isActionLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : isCheckedIn ? (
                   <>
                     <LogOut className="w-5 h-5" />
                     Check Out
@@ -169,7 +196,7 @@ export const Attendance = () => {
                 ) : (
                   <>
                     <LogIn className="w-5 h-5" />
-                    Check In
+                    {todayRecord?.check_out ? "Day Complete" : "Check In"}
                   </>
                 )}
               </Button>
@@ -182,8 +209,8 @@ export const Attendance = () => {
           {[
             { label: 'Present Days', value: presentDays, icon: CheckCircle, color: 'text-success' },
             { label: 'Total Hours', value: `${totalHours.toFixed(1)}h`, icon: Clock, color: 'text-primary' },
-            { label: 'Late Days', value: attendance.filter((a) => a.status === 'late').length, icon: AlertCircle, color: 'text-warning' },
-            { label: 'Absent Days', value: attendance.filter((a) => a.status === 'absent').length, icon: XCircle, color: 'text-destructive' },
+            { label: 'Late Days', value: lateDays, icon: AlertCircle, color: 'text-warning' },
+            { label: 'Absent Days', value: absentDays, icon: XCircle, color: 'text-destructive' },
           ].map((stat, index) => (
             <motion.div
               key={stat.label}
@@ -213,38 +240,27 @@ export const Attendance = () => {
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              Weekly Overview
+              History Overview
             </h2>
-            <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" onClick={() => setCurrentWeek(currentWeek + 1)}>
-                <ChevronLeft className="w-5 h-5" />
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setCurrentWeek(Math.max(0, currentWeek - 1))}
-                disabled={currentWeek === 0}
-              >
-                <ChevronRight className="w-5 h-5" />
-              </Button>
-            </div>
+            {/* Pagination controls simplified for now */}
           </div>
 
           <div className="space-y-3">
-            {attendance.slice(0, 7).map((record, index) => {
-              const config = statusConfig[record.status];
+            {weekRecords.map((record, index) => {
+              const config = statusConfig[record.status] || statusConfig['present'];
               const StatusIcon = config.icon;
               const date = new Date(record.date);
 
               return (
                 <motion.div
-                  key={record.date}
+                  key={record.id}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: 0.1 * index }}
                   className={cn(
                     'flex items-center justify-between p-4 rounded-xl border border-border',
-                    index === 0 && 'ring-2 ring-primary/20 bg-primary/5'
+                    // Highlight today
+                    record.date === new Date().toISOString().split('T')[0] && 'ring-2 ring-primary/20 bg-primary/5'
                   )}
                 >
                   <div className="flex items-center gap-4">
@@ -263,11 +279,11 @@ export const Attendance = () => {
                   <div className="flex items-center gap-6 text-sm">
                     <div className="text-center">
                       <p className="text-muted-foreground">Check In</p>
-                      <p className="font-medium">{record.checkIn || '--:--'}</p>
+                      <p className="font-medium">{record.check_in?.substring(0, 5) || '--:--'}</p>
                     </div>
                     <div className="text-center">
                       <p className="text-muted-foreground">Check Out</p>
-                      <p className="font-medium">{record.checkOut || '--:--'}</p>
+                      <p className="font-medium">{record.check_out?.substring(0, 5) || '--:--'}</p>
                     </div>
                     <div className="text-center min-w-[60px]">
                       <p className="text-muted-foreground">Hours</p>
@@ -277,6 +293,11 @@ export const Attendance = () => {
                 </motion.div>
               );
             })}
+            {weekRecords.length === 0 && (
+              <div className="text-center py-6 text-muted-foreground">
+                No attendance records found.
+              </div>
+            )}
           </div>
         </motion.div>
       </div>

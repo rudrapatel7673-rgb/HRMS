@@ -94,25 +94,6 @@ export const Landing = () => {
             </div>
           </motion.div>
 
-          {/* Dashboard Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 60 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-            className="mt-20 relative"
-          >
-            <div className="glass-card rounded-3xl p-4 md:p-8 shadow-glow">
-              <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center border border-border/50">
-                <div className="text-center">
-                  <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                    <img src="/logo.png" alt="Dayflow Icon" className="w-full h-full object-contain" />
-                  </div>
-                  <p className="text-lg font-medium text-muted-foreground">Dashboard Preview</p>
-                  <p className="text-sm text-muted-foreground/70">Sign in to explore</p>
-                </div>
-              </div>
-            </div>
-          </motion.div>
         </div>
       </section>
 
@@ -137,10 +118,10 @@ export const Landing = () => {
             </div>
           </div>
         </div>
-      </section>
+      </section >
 
       {/* Features Section */}
-      <section className="py-20 px-4">
+      < section className="py-20 px-4" >
         <div className="max-w-7xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -176,10 +157,10 @@ export const Landing = () => {
             ))}
           </div>
         </div>
-      </section>
+      </section >
 
       {/* CTA Section */}
-      <section className="py-20 px-4">
+      < section className="py-20 px-4" >
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -210,8 +191,8 @@ export const Landing = () => {
             </div>
           </motion.div>
         </div>
-      </section>
+      </section >
 
-    </div>
+    </div >
   );
 };
