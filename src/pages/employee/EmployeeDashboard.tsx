@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { User, Calendar, FileText, DollarSign, Clock, CheckCircle } from 'lucide-react';
-import EmployeeLayout from '@/components/layout/EmployeeLayout';
+import EmployeeLayout from '@/components/Layout/EmployeeLayout';
 
 const dashboardCards = [
   {

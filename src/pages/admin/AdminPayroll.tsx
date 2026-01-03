@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Download, FileText, DollarSign, Edit2, Save } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/Layout/AdminLayout';
 
 const payrollData = [
   { id: 'EMP-001', name: 'John Doe', department: 'Engineering', grossSalary: 8500, deductions: 1275, netSalary: 7225, status: 'Processed' },

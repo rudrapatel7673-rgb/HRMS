@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Check, X, MessageSquare, Filter } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/Layout/AdminLayout';
 
 const leaveRequests = [
   { id: 1, name: 'Sarah Johnson', empId: 'EMP-002', type: 'Annual Leave', startDate: 'Jan 5, 2026', endDate: 'Jan 8, 2026', reason: 'Family vacation to Hawaii', status: 'Pending' },

@@ -1,5 +1,5 @@
 import { Download, FileText, DollarSign } from 'lucide-react';
-import EmployeeLayout from '@/components/layout/EmployeeLayout';
+import EmployeeLayout from '@/components/Layout/EmployeeLayout';
 
 const salaryHistory = [
   { month: 'December 2025', grossSalary: '$8,500', deductions: '$1,275', netSalary: '$7,225', status: 'Paid' },

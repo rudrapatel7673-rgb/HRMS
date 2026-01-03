@@ -1,5 +1,5 @@
 import { BarChart3, PieChart, TrendingUp, Download, Calendar } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/Layout/AdminLayout';
 
 const Reports = () => {
   return (

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Plus, Mail, Phone, Building, ExternalLink, Filter } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/Layout/AdminLayout';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";

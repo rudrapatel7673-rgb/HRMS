@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Calendar, FileText, Loader2 } from 'lucide-react';
-import EmployeeLayout from '@/components/layout/EmployeeLayout';
+import EmployeeLayout from '@/components/Layout/EmployeeLayout';
 
 const leaveHistory = [
   { id: 1, type: 'Annual Leave', startDate: 'Dec 24, 2025', endDate: 'Dec 26, 2025', reason: 'Family vacation', status: 'Approved' },

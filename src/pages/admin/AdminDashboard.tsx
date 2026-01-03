@@ -1,5 +1,5 @@
 import { Users, Calendar, FileText, DollarSign, TrendingUp, Clock, AlertCircle } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/Layout/AdminLayout';
 
 const stats = [
   { label: 'Total Employees', value: '248', change: '+12%', icon: Users, color: 'bg-primary/10 text-primary' },

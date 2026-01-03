@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Camera, Save, X, Edit2 } from 'lucide-react';
-import EmployeeLayout from '@/components/layout/EmployeeLayout';
+import EmployeeLayout from '@/components/Layout/EmployeeLayout';
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);

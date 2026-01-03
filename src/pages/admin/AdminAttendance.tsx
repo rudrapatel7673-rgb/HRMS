@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Search, Calendar, Download, Filter } from 'lucide-react';
-import AdminLayout from '@/components/layout/AdminLayout';
+import AdminLayout from '@/components/Layout/AdminLayout';
 
 const attendanceData = [
   { id: 'EMP-001', name: 'John Doe', date: 'Jan 3, 2026', checkIn: '09:15 AM', checkOut: '06:30 PM', status: 'Present' },

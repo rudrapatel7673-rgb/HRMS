@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Clock, LogIn, LogOut, Calendar } from 'lucide-react';
-import EmployeeLayout from '@/components/layout/EmployeeLayout';
+import EmployeeLayout from '@/components/Layout/EmployeeLayout';
 
 const attendanceHistory = [
   { date: 'Jan 3, 2026', checkIn: '09:15 AM', checkOut: '06:30 PM', status: 'Present' },
