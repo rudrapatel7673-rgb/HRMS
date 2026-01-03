@@ -48,11 +48,8 @@ export const SignIn = () => {
         className="w-full max-w-md"
       >
         <div className="glass-card rounded-3xl p-8">
-          <Link to="/" className="flex items-center gap-2 justify-center mb-8">
-            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-xl">D</span>
-            </div>
-            <span className="font-bold text-2xl gradient-text">Dayflow</span>
+          <Link to="/" className="flex items-center justify-center mb-10">
+            <img src="/full_logo.png" alt="Dayflow" className="h-32 w-auto object-contain" />
           </Link>
 
           <h1 className="text-2xl font-bold text-center mb-2">Welcome back</h1>
@@ -75,7 +72,15 @@ export const SignIn = () => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password">Password</Label>
+                <Link
+                  to="/forgot-password"
+                  className="text-sm text-primary hover:underline font-medium"
+                >
+                  Forgot password?
+                </Link>
+              </div>
               <div className="relative">
                 <Input
                   id="password"
@@ -127,8 +132,8 @@ export const SignIn = () => {
               Sign up
             </Link>
           </p>
-        </div>
-      </motion.div>
-    </div>
+        </div >
+      </motion.div >
+    </div >
   );
 };

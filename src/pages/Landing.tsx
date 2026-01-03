@@ -61,25 +61,21 @@ export const Landing = () => {
       <Navbar />
 
       {/* Hero Section */}
-      <section className="pt-32 pb-20 px-4">
+      <section className="pt-44 pb-20 px-4">
         <div className="max-w-7xl mx-auto text-center">
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
+            transition={{ duration: 0.8, ease: "easeOut" }}
           >
-            <div className="inline-flex items-center gap-2 glass-card px-4 py-2 rounded-full mb-8">
-              <span className="w-2 h-2 rounded-full bg-success animate-pulse" />
-              <span className="text-sm font-medium">Now with AI-powered insights</span>
-            </div>
-            
+
             <h1 className="text-5xl md:text-7xl font-bold mb-6 leading-tight">
               Streamline Your
               <span className="gradient-text block">HR Operations</span>
             </h1>
-            
+
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-10">
-              Transform your human resource management with Dayflow. 
+              Transform your human resource management with Dayflow.
               Modern, intuitive, and powerful tools for today's workplace.
             </p>
 
@@ -108,8 +104,8 @@ export const Landing = () => {
             <div className="glass-card rounded-3xl p-4 md:p-8 shadow-glow">
               <div className="aspect-video rounded-2xl bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center border border-border/50">
                 <div className="text-center">
-                  <div className="w-20 h-20 rounded-2xl gradient-primary mx-auto mb-4 flex items-center justify-center">
-                    <Users className="w-10 h-10 text-primary-foreground" />
+                  <div className="w-20 h-20 flex items-center justify-center mx-auto mb-4">
+                    <img src="/logo.png" alt="Dayflow Icon" className="w-full h-full object-contain" />
                   </div>
                   <p className="text-lg font-medium text-muted-foreground">Dashboard Preview</p>
                   <p className="text-sm text-muted-foreground/70">Sign in to explore</p>
@@ -192,7 +188,7 @@ export const Landing = () => {
             className="gradient-primary rounded-3xl p-12 text-center relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDBWNDBIMHoiLz48Y2lyY2xlIGN4PSIyMCIgY3k9IjIwIiByPSIyIiBmaWxsPSIjZmZmIiBmaWxsLW9wYWNpdHk9Ii4xIi8+PC9nPjwvc3ZnPg==')] opacity-30" />
-            
+
             <div className="relative">
               <h2 className="text-3xl md:text-4xl font-bold text-primary-foreground mb-4">
                 Ready to transform your HR?
@@ -210,36 +206,12 @@ export const Landing = () => {
                   </Button>
                 </Link>
               </div>
-              
-              <div className="flex items-center justify-center gap-6 mt-8 text-primary-foreground/80 text-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>No credit card required</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>14-day free trial</span>
-                </div>
-              </div>
+
             </div>
           </motion.div>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="py-12 px-4 border-t border-border">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">D</span>
-            </div>
-            <span className="font-semibold gradient-text">Dayflow</span>
-          </div>
-          <p className="text-muted-foreground text-sm">
-            © 2026 Dayflow. All rights reserved.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 };

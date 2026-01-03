@@ -46,12 +46,12 @@
     --gradient-primary: linear-gradient(135deg, hsl(252 85% 60%) 0%, hsl(280 85% 55%) 50%, hsl(320 85% 55%) 100%);
     --gradient-secondary: linear-gradient(135deg, hsl(172 80% 45%) 0%, hsl(200 85% 50%) 100%);
     --gradient-mesh: radial-gradient(at 40% 20%, hsl(252 85% 95%) 0px, transparent 50%),
-                     radial-gradient(at 80% 0%, hsl(172 80% 92%) 0px, transparent 50%),
-                     radial-gradient(at 0% 50%, hsl(280 85% 95%) 0px, transparent 50%),
-                     radial-gradient(at 80% 50%, hsl(320 85% 95%) 0px, transparent 50%),
-                     radial-gradient(at 0% 100%, hsl(200 85% 92%) 0px, transparent 50%),
-                     radial-gradient(at 80% 100%, hsl(252 85% 95%) 0px, transparent 50%);
-    
+      radial-gradient(at 80% 0%, hsl(172 80% 92%) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsl(280 85% 95%) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsl(320 85% 95%) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(200 85% 92%) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsl(252 85% 95%) 0px, transparent 50%);
+
     /* Shadows */
     --shadow-sm: 0 1px 2px 0 hsl(230 25% 10% / 0.03);
     --shadow-md: 0 4px 6px -1px hsl(230 25% 10% / 0.05), 0 2px 4px -2px hsl(230 25% 10% / 0.05);
@@ -105,11 +105,11 @@
     --ring: 252 85% 65%;
 
     --gradient-mesh: radial-gradient(at 40% 20%, hsl(252 85% 20%) 0px, transparent 50%),
-                     radial-gradient(at 80% 0%, hsl(172 80% 18%) 0px, transparent 50%),
-                     radial-gradient(at 0% 50%, hsl(280 85% 18%) 0px, transparent 50%),
-                     radial-gradient(at 80% 50%, hsl(320 85% 18%) 0px, transparent 50%),
-                     radial-gradient(at 0% 100%, hsl(200 85% 18%) 0px, transparent 50%),
-                     radial-gradient(at 80% 100%, hsl(252 85% 20%) 0px, transparent 50%);
+      radial-gradient(at 80% 0%, hsl(172 80% 18%) 0px, transparent 50%),
+      radial-gradient(at 0% 50%, hsl(280 85% 18%) 0px, transparent 50%),
+      radial-gradient(at 80% 50%, hsl(320 85% 18%) 0px, transparent 50%),
+      radial-gradient(at 0% 100%, hsl(200 85% 18%) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, hsl(252 85% 20%) 0px, transparent 50%);
 
     --shadow-sm: 0 1px 2px 0 hsl(0 0% 0% / 0.2);
     --shadow-md: 0 4px 6px -1px hsl(0 0% 0% / 0.25);
@@ -170,12 +170,16 @@
   }
 
   @keyframes blob {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translate(0px, 0px) scale(1);
     }
+
     33% {
       transform: translate(30px, -50px) scale(1.1);
     }
+
     66% {
       transform: translate(-20px, 20px) scale(0.9);
     }
@@ -186,9 +190,12 @@
   }
 
   @keyframes float {
-    0%, 100% {
+
+    0%,
+    100% {
       transform: translateY(0px);
     }
+
     50% {
       transform: translateY(-20px);
     }
@@ -207,5 +214,12 @@
 @layer utilities {
   .text-balance {
     text-wrap: balance;
+  }
+
+  /* Ensure sidebar translation is ignored on desktop to prevent gaps */
+  @media (min-width: 1024px) {
+    .lg\:translate-x-0 {
+      transform: translateX(0) !important;
+    }
   }
 }
