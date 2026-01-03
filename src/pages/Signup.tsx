@@ -1,245 +1,203 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Eye, EyeOff, Mail, Lock, User, BadgeCheck, Loader2, CheckCircle, ArrowLeft } from 'lucide-react';
-import Logo from '@/components/ui/Logo';
+import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { useAuth, UserRole } from '@/contexts/AuthContext';
+import { AnimatedBackground } from '@/components/layout/AnimatedBackground';
+import { Eye, EyeOff, Loader2, User, UserCog } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
 
-const Signup = () => {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    employeeId: '',
-    fullName: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    role: 'employee' as 'employee' | 'hr',
-  });
+export const SignUp = () => {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [employeeId, setEmployeeId] = useState('');
+  const [password, setPassword] = useState('');
+  const [role, setRole] = useState<UserRole>('employee');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
-
-  const handleChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
-  };
+  const { signup } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
     setIsLoading(true);
 
-    // Simulate signup
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    const success = await signup({
+      name,
+      email,
+      password,
+      employeeId,
+      role,
+    });
     
-    setSuccess(true);
+    if (success) {
+      toast({
+        title: 'Account created!',
+        description: 'Welcome to Dayflow. Redirecting to dashboard...',
+      });
+      navigate('/dashboard');
+    } else {
+      toast({
+        title: 'Error',
+        description: 'Something went wrong. Please try again.',
+        variant: 'destructive',
+      });
+    }
     
-    setTimeout(() => {
-      navigate('/login');
-    }, 2000);
+    setIsLoading(false);
   };
 
-  if (success) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
-        <div className="w-full max-w-md fade-in">
-          <div className="bg-card rounded-2xl shadow-xl border border-border p-8 text-center">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-success/10 flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-success" />
-            </div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">Account Created!</h2>
-            <p className="text-muted-foreground">Redirecting you to login...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4 py-12">
-      <div className="w-full max-w-md fade-in">
-        <div className="bg-card rounded-2xl shadow-xl border border-border p-8">
-          {/* Back Link */}
-          <Link to="/login" className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-6">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Login
+    <div className="min-h-screen flex items-center justify-center p-4 py-12">
+      <AnimatedBackground />
+      
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="w-full max-w-md"
+      >
+        <div className="glass-card rounded-3xl p-8">
+          <Link to="/" className="flex items-center gap-2 justify-center mb-8">
+            <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-xl">D</span>
+            </div>
+            <span className="font-bold text-2xl gradient-text">Dayflow</span>
           </Link>
 
-          {/* Logo */}
-          <div className="flex justify-center mb-6">
-            <Logo size="lg" />
-          </div>
+          <h1 className="text-2xl font-bold text-center mb-2">Create an account</h1>
+          <p className="text-muted-foreground text-center mb-8">
+            Get started with your HR management
+          </p>
 
-          {/* Title */}
-          <h1 className="text-2xl font-bold text-center text-foreground mb-2">Create Account</h1>
-          <p className="text-center text-muted-foreground mb-8">Join your team on WorkFlowHR</p>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 p-4 bg-destructive/10 border border-destructive/20 rounded-lg text-destructive text-sm">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Employee ID */}
+          <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Employee ID</label>
-              <div className="relative">
-                <BadgeCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={formData.employeeId}
-                  onChange={(e) => handleChange('employeeId', e.target.value)}
-                  className="form-input pl-12"
-                  placeholder="EMP-001"
-                  required
-                />
-              </div>
+              <Label htmlFor="name">Full Name</Label>
+              <Input
+                id="name"
+                type="text"
+                placeholder="John Doe"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+                className="h-12"
+              />
             </div>
 
-            {/* Full Name */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Full Name</label>
-              <div className="relative">
-                <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="text"
-                  value={formData.fullName}
-                  onChange={(e) => handleChange('fullName', e.target.value)}
-                  className="form-input pl-12"
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
+              <Label htmlFor="employeeId">Employee ID</Label>
+              <Input
+                id="employeeId"
+                type="text"
+                placeholder="EMP001"
+                value={employeeId}
+                onChange={(e) => setEmployeeId(e.target.value)}
+                required
+                className="h-12"
+              />
             </div>
 
-            {/* Email */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type="email"
-                  value={formData.email}
-                  onChange={(e) => handleChange('email', e.target.value)}
-                  className="form-input pl-12"
-                  placeholder="you@company.com"
-                  required
-                />
-              </div>
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                placeholder="john@company.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="h-12"
+              />
             </div>
 
-            {/* Password */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Password</label>
+              <Label htmlFor="password">Password</Label>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
+                <Input
+                  id="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={(e) => handleChange('password', e.target.value)}
-                  className="form-input pl-12 pr-12"
-                  placeholder="Min. 6 characters"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
                   required
+                  minLength={6}
+                  className="h-12 pr-12"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            {/* Confirm Password */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={(e) => handleChange('confirmPassword', e.target.value)}
-                  className="form-input pl-12 pr-12"
-                  placeholder="Confirm your password"
-                  required
-                />
+              <Label>Role</Label>
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  onClick={() => setRole('employee')}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2",
+                    role === 'employee'
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
                 >
-                  {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                  <User className={cn("w-6 h-6", role === 'employee' ? "text-primary" : "text-muted-foreground")} />
+                  <span className={cn("font-medium", role === 'employee' ? "text-primary" : "text-muted-foreground")}>
+                    Employee
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setRole('admin')}
+                  className={cn(
+                    "p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2",
+                    role === 'admin'
+                      ? "border-primary bg-primary/5"
+                      : "border-border hover:border-primary/50"
+                  )}
+                >
+                  <UserCog className={cn("w-6 h-6", role === 'admin' ? "text-primary" : "text-muted-foreground")} />
+                  <span className={cn("font-medium", role === 'admin' ? "text-primary" : "text-muted-foreground")}>
+                    HR / Admin
+                  </span>
                 </button>
               </div>
             </div>
 
-            {/* Role Selector */}
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">Role</label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => handleChange('role', 'employee')}
-                  className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all duration-200 ${
-                    formData.role === 'employee'
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-background text-muted-foreground hover:border-primary/50'
-                  }`}
-                >
-                  Employee
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleChange('role', 'hr')}
-                  className={`flex-1 py-3 px-4 rounded-lg border-2 font-medium transition-all duration-200 ${
-                    formData.role === 'hr'
-                      ? 'border-primary bg-primary/10 text-primary'
-                      : 'border-border bg-background text-muted-foreground hover:border-primary/50'
-                  }`}
-                >
-                  HR
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
+            <Button
               type="submit"
+              variant="gradient"
+              size="lg"
+              className="w-full"
               disabled={isLoading}
-              className="w-full btn-primary py-4 text-base mt-6"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Creating account...
+                </>
               ) : (
                 'Create Account'
               )}
-            </button>
+            </Button>
           </form>
 
-          {/* Login Link */}
-          <p className="mt-6 text-center text-muted-foreground">
+          <p className="text-center text-muted-foreground mt-6">
             Already have an account?{' '}
-            <Link to="/login" className="text-primary font-medium hover:underline">
-              Sign In
+            <Link to="/signin" className="text-primary hover:underline font-medium">
+              Sign in
             </Link>
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };
-
-export default Signup;

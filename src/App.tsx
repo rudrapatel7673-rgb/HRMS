@@ -3,37 +3,91 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider, useAuth } from "./context/AuthContext";
+import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Index from "./pages/Index";
-import Login from "./pages/Login";
-import Signup from "./pages/Signup";
-import EmployeeDashboard from "./pages/Employee/EmployeeDashboard";
-import Profile from "./pages/Employee/Profile";
-import Attendance from "./pages/Employee/Attendance";
-import Leave from "./pages/Employee/Leave";
-import Payroll from "./pages/Employee/Payroll";
-import AdminDashboard from "./pages/Admin/AdminDashboard";
-import Employees from "./pages/Admin/Employees";
-import AdminAttendance from "./pages/Admin/AdminAttendance";
-import AdminLeave from "./pages/Admin/AdminLeave";
-import AdminPayroll from "./pages/Admin/AdminPayroll";
-import Reports from "./pages/Admin/Reports";
 import NotFound from "./pages/NotFound";
+import { SignIn } from "./pages/SignIn";
+import { SignUp } from "./pages/SignUp";
+import { Dashboard } from "./pages/Dashboard";
+import { Profile } from "./pages/Profile";
+import { Attendance } from "./pages/Attendance";
+import { Leave } from "./pages/Leave";
+import { Payroll } from "./pages/Payroll";
+import { Employees } from "./pages/Employees";
+import { Approvals } from "./pages/Approvals";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children, allowedRole }: { children: React.ReactNode, allowedRole?: string }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
+  return isAuthenticated ? <>{children}</> : <Navigate to="/signin" />;
+};
 
-  if (loading) return <div className="flex h-screen items-center justify-center font-medium">Loading...</div>;
-
-  if (!user) return <Navigate to="/login" replace />;
-
-  if (allowedRole && user.role !== allowedRole) {
-    return <Navigate to="/" replace />;
-  }
-
-  return <>{children}</>;
+const AppRoutes = () => {
+  return (
+    <Routes>
+      <Route path="/" element={<Index />} />
+      <Route path="/signin" element={<SignIn />} />
+      <Route path="/signup" element={<SignUp />} />
+      <Route
+        path="/dashboard"
+        element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/profile"
+        element={
+          <ProtectedRoute>
+            <Profile />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/attendance"
+        element={
+          <ProtectedRoute>
+            <Attendance />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/leave"
+        element={
+          <ProtectedRoute>
+            <Leave />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/payroll"
+        element={
+          <ProtectedRoute>
+            <Payroll />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/employees"
+        element={
+          <ProtectedRoute>
+            <Employees />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/approvals"
+        element={
+          <ProtectedRoute>
+            <Approvals />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
 };
 
 const App = () => (
@@ -43,72 +97,7 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/login" element={<Login />} />
-            <Route path="/signup" element={<Signup />} />
-
-            {/* Employee Routes */}
-            <Route path="/employee" element={
-              <ProtectedRoute allowedRole="EMPLOYEE">
-                <EmployeeDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/employee/profile" element={
-              <ProtectedRoute allowedRole="EMPLOYEE">
-                <Profile />
-              </ProtectedRoute>
-            } />
-            <Route path="/employee/attendance" element={
-              <ProtectedRoute allowedRole="EMPLOYEE">
-                <Attendance />
-              </ProtectedRoute>
-            } />
-            <Route path="/employee/leave" element={
-              <ProtectedRoute allowedRole="EMPLOYEE">
-                <Leave />
-              </ProtectedRoute>
-            } />
-            <Route path="/employee/payroll" element={
-              <ProtectedRoute allowedRole="EMPLOYEE">
-                <Payroll />
-              </ProtectedRoute>
-            } />
-
-            {/* Admin Routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRole="ADMIN">
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/employees" element={
-              <ProtectedRoute allowedRole="ADMIN">
-                <Employees />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/attendance" element={
-              <ProtectedRoute allowedRole="ADMIN">
-                <AdminAttendance />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/leave" element={
-              <ProtectedRoute allowedRole="ADMIN">
-                <AdminLeave />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/payroll" element={
-              <ProtectedRoute allowedRole="ADMIN">
-                <AdminPayroll />
-              </ProtectedRoute>
-            } />
-            <Route path="/admin/reports" element={
-              <ProtectedRoute allowedRole="ADMIN">
-                <Reports />
-              </ProtectedRoute>
-            } />
-
-            <Route path="*" element={<NotFound />} />
-          </Routes>
+          <AppRoutes />
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>
