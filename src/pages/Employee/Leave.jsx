@@ -1,19 +1,39 @@
-import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import React, { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { CalendarDays, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
+import { useAuth } from '../../context/AuthContext';
 
 const Leave = () => {
-  const [leaveType, setLeaveType] = useState('sick');
+  const { user } = useAuth();
+  const [leaveType, setLeaveType] = useState('Sick');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [reason, setReason] = useState('');
-  const [leaves, setLeaves] = useState([
-    { id: 1, type: 'Sick Leave', start: '2024-03-10', end: '2024-03-11', status: 'approved' },
-    { id: 2, type: 'Casual Leave', start: '2024-02-15', end: '2024-02-16', status: 'rejected' },
-  ]);
+  const [leaves, setLeaves] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
 
-  const handleSubmit = (e) => {
+  const fetchLeaves = useCallback(async () => {
+    if (!user) return;
+    const { data, error } = await supabase
+      .from('leave_requests')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false });
+
+    if (!error) setLeaves(data);
+    setLoading(false);
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchLeaves();
+    }
+  }, [user, fetchLeaves]);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage('');
 
@@ -27,33 +47,40 @@ const Leave = () => {
       return;
     }
 
-    const newLeave = {
-      id: Date.now(),
-      type: leaveType === 'sick' ? 'Sick Leave' : 'Casual Leave',
-      start: startDate,
-      end: endDate,
-      status: 'pending'
-    };
+    const { error } = await supabase
+      .from('leave_requests')
+      .insert([{
+        user_id: user.id,
+        leave_type: leaveType,
+        start_date: startDate,
+        end_date: endDate,
+        reason: reason,
+        status: 'Pending'
+      }]);
 
-    setLeaves([newLeave, ...leaves]);
-    setStartDate('');
-    setEndDate('');
-    setReason('');
-    // Show success msg (can be toast in real app)
+    if (!error) {
+      setStartDate('');
+      setEndDate('');
+      setReason('');
+      fetchLeaves();
+      setMessage('Leave request submitted successfully!');
+    } else {
+      setMessage('Error: ' + error.message);
+    }
   };
 
   const getStatusColor = (status) => {
     switch (status) {
-      case 'approved': return 'text-green-600 bg-green-50 border-green-100';
-      case 'rejected': return 'text-red-600 bg-red-50 border-red-100';
+      case 'Approved': return 'text-green-600 bg-green-50 border-green-100';
+      case 'Rejected': return 'text-red-600 bg-red-50 border-red-100';
       default: return 'text-amber-600 bg-amber-50 border-amber-100';
     }
   };
 
   const getStatusIcon = (status) => {
     switch (status) {
-      case 'approved': return <CheckCircle size={16} />;
-      case 'rejected': return <XCircle size={16} />;
+      case 'Approved': return <CheckCircle size={16} />;
+      case 'Rejected': return <XCircle size={16} />;
       default: return <Clock size={16} />;
     }
   };
@@ -74,7 +101,7 @@ const Leave = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {message && (
-            <div className="p-3 bg-red-50 text-red-500 text-sm rounded-lg border border-red-100">
+            <div className={`p-3 text-sm rounded-lg border ${message.includes('success') ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-500 border-red-100'}`}>
               {message}
             </div>
           )}
@@ -86,9 +113,9 @@ const Leave = () => {
               onChange={(e) => setLeaveType(e.target.value)}
               className="input-field"
             >
-              <option value="sick">Sick Leave</option>
-              <option value="casual">Casual Leave</option>
-              <option value="unpaid">Unpaid Leave</option>
+              <option value="Sick">Sick Leave</option>
+              <option value="Paid">Paid Leave</option>
+              <option value="Unpaid">Unpaid Leave</option>
             </select>
           </div>
 
@@ -137,23 +164,32 @@ const Leave = () => {
       >
         <h2 className="text-xl font-bold text-gray-800 mb-6">Leave History</h2>
         <div className="space-y-3">
-          {leaves.map((leave) => (
-            <div
-              key={leave.id}
-              className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 bg-white/50 transition-colors"
-            >
-              <div className="flex justify-between items-start mb-2">
-                <h3 className="font-semibold text-gray-800">{leave.type}</h3>
-                <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(leave.status)}`}>
-                  {getStatusIcon(leave.status)}
-                  <span className="capitalize">{leave.status}</span>
+          {loading ? (
+            <p className="text-center text-gray-500">Loading...</p>
+          ) : leaves.length === 0 ? (
+            <p className="text-center text-gray-500">No leave requests found.</p>
+          ) : (
+            leaves.map((leave) => (
+              <div
+                key={leave.leave_id}
+                className="p-4 rounded-xl border border-gray-100 hover:border-gray-200 bg-white/50 transition-colors"
+              >
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="font-semibold text-gray-800">{leave.leave_type}</h3>
+                  <div className={`flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${getStatusColor(leave.status)}`}>
+                    {getStatusIcon(leave.status)}
+                    <span className="capitalize">{leave.status}</span>
+                  </div>
                 </div>
+                <p className="text-sm text-gray-500">
+                  {new Date(leave.start_date).toLocaleDateString()} - {new Date(leave.end_date).toLocaleDateString()}
+                </p>
+                {leave.admin_comment && (
+                  <p className="text-xs text-gray-400 mt-2 italic">Comment: {leave.admin_comment}</p>
+                )}
               </div>
-              <p className="text-sm text-gray-500">
-                {new Date(leave.start).toLocaleDateString()} - {new Date(leave.end).toLocaleDateString()}
-              </p>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </motion.div>
     </div>

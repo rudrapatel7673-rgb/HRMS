@@ -1,10 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { motion } from 'framer-motion';
-import { User, Mail, Phone, MapPin, Briefcase } from 'lucide-react';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
+import { User, Mail, Phone, MapPin, Briefcase, Clock } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const Profile = () => {
   const { user } = useAuth();
+  const [extProfile, setExtProfile] = useState(null);
+
+  useEffect(() => {
+    const fetchExtProfile = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('employee_profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+
+      if (data) setExtProfile(data);
+    };
+
+    if (user) {
+      fetchExtProfile();
+    }
+  }, [user]);
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -17,12 +36,15 @@ const Profile = () => {
         <div className="relative pt-16 px-4 flex flex-col md:flex-row items-end md:items-center gap-6">
           <div className="w-32 h-32 rounded-full bg-white p-1 shadow-xl">
             <div className="w-full h-full rounded-full bg-gray-200 flex items-center justify-center text-4xl font-bold text-gray-400">
-              {user?.name?.charAt(0).toUpperCase()}
+              {user?.full_name?.charAt(0).toUpperCase()}
             </div>
           </div>
           <div className="mb-4">
-            <h1 className="text-3xl font-bold text-gray-800">{user?.name}</h1>
-            <p className="text-indigo-600 font-medium">{user?.role} • Engineering Team</p>
+            <h1 className="text-3xl font-bold text-gray-800">{user?.full_name}</h1>
+            <p className="text-indigo-600 font-medium">
+              {extProfile?.designation || user?.role} • {extProfile?.department || 'Internal Team'}
+            </p>
+            <p className="text-xs text-gray-400 mt-1">ID: {user?.employee_id}</p>
           </div>
           <button className="md:ml-auto mb-4 btn btn-primary">
             Edit Profile
@@ -51,14 +73,14 @@ const Profile = () => {
               <div className="p-2 bg-purple-50 rounded-lg text-purple-600"><Phone size={20} /></div>
               <div>
                 <p className="text-sm text-gray-500">Phone</p>
-                <p className="font-medium">+1 (555) 000-0000</p>
+                <p className="font-medium">{extProfile?.phone || '+1 (555) 000-0000'}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="p-2 bg-pink-50 rounded-lg text-pink-600"><MapPin size={20} /></div>
               <div>
                 <p className="text-sm text-gray-500">Location</p>
-                <p className="font-medium">San Francisco, CA</p>
+                <p className="font-medium">{extProfile?.address || 'San Francisco, CA'}</p>
               </div>
             </div>
           </div>
@@ -77,14 +99,14 @@ const Profile = () => {
               <div className="p-2 bg-amber-50 rounded-lg text-amber-600"><Briefcase size={20} /></div>
               <div>
                 <p className="text-sm text-gray-500">Department</p>
-                <p className="font-medium">Product Engineering</p>
+                <p className="font-medium">{extProfile?.department || 'Product Engineering'}</p>
               </div>
             </div>
             <div className="flex items-center gap-4">
               <div className="p-2 bg-green-50 rounded-lg text-green-600"><Clock size={20} /></div>
               <div>
                 <p className="text-sm text-gray-500">Join Date</p>
-                <p className="font-medium">Jan 12, 2024</p>
+                <p className="font-medium">{extProfile?.join_date || new Date().toLocaleDateString()}</p>
               </div>
             </div>
           </div>

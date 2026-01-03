@@ -1,4 +1,5 @@
 import { createContext, useState, useContext, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext(null);
 
@@ -7,62 +8,87 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('hrms_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    // Check active sessions and sets the user
+    const getSession = async () => {
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+
+        if (session) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
+
+          setUser({ ...session.user, ...profile });
+        }
+      } catch (err) {
+        console.error('Auth check failed:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    getSession();
+
+    // Listen for changes on auth state (logged in, signed out, etc.)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        setUser({ ...session.user, ...profile });
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email, password) => {
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    const users = JSON.parse(localStorage.getItem('hrms_users') || '[]');
-    const foundUser = users.find(u => u.email === email && u.password === password);
-
-    if (foundUser) {
-      const { password, ...userWithoutPass } = foundUser;
-      setUser(userWithoutPass);
-      localStorage.setItem('hrms_user', JSON.stringify(userWithoutPass));
-      return { success: true };
-    }
-
-    // Check for admin/demo credentials if no users exist
-    if (email === 'admin@hrms.com' && password === 'admin123') {
-      const adminUser = { id: 'admin1', name: 'Admin User', email: 'admin@hrms.com', role: 'admin' };
-      setUser(adminUser);
-      localStorage.setItem('hrms_user', JSON.stringify(adminUser));
-      return { success: true };
-    }
-
-    return { success: false, error: 'Invalid email or password' };
+    if (error) return { success: false, error: error.message };
+    return { success: true };
   };
 
   const signup = async (userData) => {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    const { email, password, full_name, employee_id } = userData;
 
-    const users = JSON.parse(localStorage.getItem('hrms_users') || '[]');
+    // We pass metadata to Supabase Auth, which our DB trigger will use
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name,
+          employee_id,
+        }
+      }
+    });
 
-    if (users.find(u => u.email === userData.email)) {
-      return { success: false, error: 'User already exists' };
+    if (error) return { success: false, error: error.message };
+
+    // The profile is now created automatically by the database trigger.
+    // We check if data.user exists to confirm auth success.
+    if (!data.user) {
+      return { success: false, error: 'Registration failed to create user.' };
     }
-
-    const newUser = { ...userData, id: Date.now().toString(), role: 'employee' }; // Default to employee
-    users.push(newUser);
-    localStorage.setItem('hrms_users', JSON.stringify(users));
-
-    // Auto login after signup
-    const { password, ...userWithoutPass } = newUser;
-    setUser(userWithoutPass);
-    localStorage.setItem('hrms_user', JSON.stringify(userWithoutPass));
 
     return { success: true };
   };
 
-  const logout = () => {
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('hrms_user');
   };
 
   return (
@@ -72,4 +98,4 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-export const useAuth = () => useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext); // eslint-disable-line react-refresh/only-export-components

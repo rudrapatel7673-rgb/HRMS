@@ -23,11 +23,11 @@ const Header = ({ onMenuClick }) => {
 
           <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
             <div className="text-right hidden sm:block">
-              <p className="text-sm font-semibold text-gray-800">{user?.name}</p>
+              <p className="text-sm font-semibold text-gray-800">{user?.full_name}</p>
               <p className="text-xs text-gray-500 capitalized">{user?.role}</p>
             </div>
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-100 to-purple-100 border-2 border-white shadow-sm flex items-center justify-center text-indigo-700 font-bold">
-              {user?.name?.charAt(0).toUpperCase()}
+              {user?.full_name ? user.full_name.charAt(0).toUpperCase() : '?'}
             </div>
           </div>
         </div>

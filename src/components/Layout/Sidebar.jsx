@@ -21,7 +21,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     { to: '/leave', icon: CalendarDays, label: 'Leave' },
   ];
 
-  if (user?.role === 'admin') {
+  if (user?.role === 'ADMIN') {
     links.push(
       { to: '/admin/employees', icon: Users, label: 'Employees' },
       { to: '/admin/approvals', icon: FileText, label: 'Approvals' }

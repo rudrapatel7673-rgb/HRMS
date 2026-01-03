@@ -26,6 +26,7 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
       <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
+
       <Route
         path="/*"
         element={
@@ -37,13 +38,16 @@ function AppRoutes() {
                 <Route path="/attendance" element={<Attendance />} />
                 <Route path="/leave" element={<Leave />} />
 
-                {/* Admin Routes */}
-                {user?.role === 'admin' && (
+                {/* Admin Routes - Check for UPPERCASE 'ADMIN' */}
+                {user?.role === 'ADMIN' && (
                   <>
                     <Route path="/admin/employees" element={<Employees />} />
                     <Route path="/admin/approvals" element={<Approvals />} />
                   </>
                 )}
+
+                {/* Fallback for unknown routes inside layout */}
+                <Route path="*" element={<Navigate to="/" />} />
               </Routes>
             </MainLayout>
           </ProtectedRoute>
