@@ -19,7 +19,12 @@ import { Approvals } from "./pages/Approvals";
 const queryClient = new QueryClient();
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, loading } = useAuth();
+
+  if (loading) {
+    return <div className="flex h-screen items-center justify-center">Loading...</div>;
+  }
+
   return isAuthenticated ? <>{children}</> : <Navigate to="/signin" />;
 };
 

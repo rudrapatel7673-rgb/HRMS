@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { supabase } from '@/lib/supabase';
+import { Session } from '@supabase/supabase-js';
 
 export type UserRole = 'employee' | 'admin';
 
@@ -19,9 +21,10 @@ export interface User {
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
+  loading: boolean;
   login: (email: string, password: string) => Promise<boolean>;
   signup: (data: SignupData) => Promise<boolean>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 interface SignupData {
@@ -32,81 +35,110 @@ interface SignupData {
   role: UserRole;
 }
 
-const mockUsers: User[] = [
-  {
-    id: '1',
-    name: 'John Doe',
-    email: 'john@dayflow.com',
-    role: 'employee',
-    employeeId: 'EMP001',
-    department: 'Engineering',
-    position: 'Software Developer',
-    phone: '+1 234 567 8900',
-    address: '123 Tech Street, San Francisco, CA',
-    joinDate: '2023-06-15',
-  },
-  {
-    id: '2',
-    name: 'Sarah Admin',
-    email: 'admin@dayflow.com',
-    role: 'admin',
-    employeeId: 'ADM001',
-    department: 'Human Resources',
-    position: 'HR Manager',
-    phone: '+1 234 567 8901',
-    address: '456 HR Avenue, San Francisco, CA',
-    joinDate: '2022-01-10',
-  },
-];
-
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(() => {
-    const stored = localStorage.getItem('dayflow_user');
-    return stored ? JSON.parse(stored) : null;
-  });
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    const foundUser = mockUsers.find((u) => u.email === email);
-    if (foundUser && password.length >= 6) {
-      setUser(foundUser);
-      localStorage.setItem('dayflow_user', JSON.stringify(foundUser));
-      return true;
+  const fetchProfile = async (session: Session) => {
+    try {
+      const { data: profile, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', session.user.id)
+        .single();
+
+      if (error) {
+        console.error('Error fetching profile:', error);
+        return null;
+      }
+
+      const transformedUser: User = {
+        id: session.user.id,
+        name: profile.name || profile.full_name || '',
+        email: session.user.email || '',
+        role: (profile.role?.toLowerCase() as UserRole) || 'employee',
+        employeeId: profile.employeeId || profile.employee_id || '',
+        department: profile.department || 'General',
+        position: profile.position || 'Employee',
+        avatar: profile.avatar_url || '',
+        phone: profile.phone || '',
+        address: profile.address || '',
+        joinDate: profile.join_date || profile.created_at || new Date().toISOString(),
+      };
+
+      setUser(transformedUser);
+      return transformedUser;
+    } catch (err) {
+      console.error('Profile fetch failed:', err);
+      return null;
     }
-    return false;
   };
 
-  const signup = async (data: SignupData): Promise<boolean> => {
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-    
-    const newUser: User = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: data.name,
-      email: data.email,
-      role: data.role,
-      employeeId: data.employeeId,
-      department: 'Pending Assignment',
-      position: 'New Employee',
-      joinDate: new Date().toISOString().split('T')[0],
+  useEffect(() => {
+    // Initial session check
+    const initAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetchProfile(session);
+      }
+      setLoading(false);
     };
-    
-    setUser(newUser);
-    localStorage.setItem('dayflow_user', JSON.stringify(newUser));
+
+    initAuth();
+
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        await fetchProfile(session);
+      } else {
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) {
+      console.error('Login error:', error.message);
+      return false;
+    }
     return true;
   };
 
-  const logout = () => {
+  const signup = async (data: SignupData): Promise<boolean> => {
+    const { error } = await supabase.auth.signUp({
+      email: data.email,
+      password: data.password,
+      options: {
+        data: {
+          name: data.name,
+          employee_id: data.employeeId,
+          role: data.role.toUpperCase(),
+        }
+      }
+    });
+
+    if (error) {
+      console.error('Signup error:', error.message);
+      return false;
+    }
+    return true;
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('dayflow_user');
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, signup, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, loading, login, signup, logout }}>
       {children}
     </AuthContext.Provider>
   );
