@@ -28,7 +28,7 @@ export interface Attendance {
 export interface LeaveRequest {
   id: string;
   user_id: string;
-  type: 'paid' | 'sick' | 'unpaid';
+  type: 'paid' | 'sick' | 'unpaid' | 'annual' | 'personal';
   start_date: string;
   end_date: string;
   reason: string;
