@@ -1,10 +1,31 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { motion } from 'framer-motion';
+import { motion } from 'framer-motion'; // eslint-disable-line no-unused-vars
 import { Clock, Calendar, CheckCircle } from 'lucide-react';
+import { supabase } from '../../lib/supabase';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const [recentActivity, setRecentActivity] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      if (!user) return;
+      const { data } = await supabase
+        .from('attendance')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: false })
+        .order('check_in', { ascending: false })
+        .limit(5);
+
+      if (data) setRecentActivity(data);
+      setLoading(false);
+    };
+
+    fetchActivity();
+  }, [user]);
 
   const stats = [
     { label: 'Attendance', value: '92%', icon: Clock, color: 'from-blue-500 to-cyan-400' },
@@ -19,7 +40,7 @@ const Dashboard = () => {
         animate={{ opacity: 1, y: 0 }}
         className="glass-card bg-gradient-to-r from-indigo-500 to-purple-600 text-white"
       >
-        <h1 className="text-3xl font-bold mb-2">Good Morning, {user?.name}!</h1>
+        <h1 className="text-3xl font-bold mb-2">Good Morning, {user?.full_name || 'User'}!</h1>
         <p className="opacity-90">Have a productive day ahead.</p>
       </motion.div>
 
@@ -54,15 +75,23 @@ const Dashboard = () => {
         >
           <h2 className="text-xl font-bold mb-4">Recent Activity</h2>
           <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center gap-4 p-3 hover:bg-white/50 rounded-xl transition-colors">
-                <div className="w-2 h-2 rounded-full bg-indigo-500"></div>
-                <div>
-                  <p className="font-medium text-gray-800">Checked in at 09:00 AM</p>
-                  <p className="text-xs text-gray-500">Today</p>
+            {loading ? (
+              <p className="text-gray-500 text-sm">Loading activity...</p>
+            ) : recentActivity.length === 0 ? (
+              <p className="text-gray-500 text-sm">No recent activity found.</p>
+            ) : (
+              recentActivity.map((log) => (
+                <div key={log.attendance_id} className="flex items-center gap-4 p-3 hover:bg-white/50 rounded-xl transition-colors">
+                  <div className={`w-2 h-2 rounded-full ${!log.check_out ? 'bg-green-500' : 'bg-red-500'}`}></div>
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      Checked {!log.check_out ? 'in' : 'out'} at {log.check_in || log.check_out}
+                    </p>
+                    <p className="text-xs text-gray-500">{log.date}</p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </motion.div>
 
