@@ -15,17 +15,15 @@ export const Navbar = () => {
 
   return (
     <motion.nav
-      initial={{ y: -20, opacity: 0 }}
+      initial={{ y: -10, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.8, ease: "easeOut" }}
       className="fixed top-0 left-0 right-0 z-50 px-4 py-4"
     >
       <div className="max-w-7xl mx-auto">
         <div className="glass-card rounded-2xl px-6 py-3 flex items-center justify-between">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-lg">D</span>
-            </div>
-            <span className="font-bold text-xl gradient-text">Dayflow</span>
+          <Link to="/" className="flex items-center">
+            <img src="/full_logo.png" alt="Dayflow" className="h-20 w-auto object-contain" />
           </Link>
 
           <div className="flex items-center gap-4">

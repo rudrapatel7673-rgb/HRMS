@@ -211,8 +211,14 @@
   }
 }
 
-@layer utilities {
-  .text-balance {
-    text-wrap: balance;
+.text-balance {
+  text-wrap: balance;
+}
+
+/* Ensure sidebar translation is ignored on desktop to prevent gaps */
+@media (min-width: 1024px) {
+  .lg\:translate-x-0 {
+    transform: translateX(0) !important;
   }
+}
 }
